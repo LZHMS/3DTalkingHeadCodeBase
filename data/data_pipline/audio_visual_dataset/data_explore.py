@@ -1,0 +1,510 @@
+"""
+Audio-Visual Dataset Exploration and Processing Module
+
+This module provides utilities for exploring, analyzing, and processing audio-visual datasets.
+It includes functions for building data subsets, statistical analysis, merging video/audio files,
+and cleaning non-MP4 files.
+
+Main Features:
+    1. Build dataset subsets by category and duration
+    2. Analyze dataset statistics (duration, file count, etc.)
+    3. Merge separate video and audio files
+    4. Clean non-MP4 files with backup option
+
+Usage:
+    python data_explore.py --mode build-subset --input filtered_video_clips.json --categories "Personal Experience"
+    python data_explore.py --mode analyze --data-dir ./output
+    python data_explore.py --mode merge --data-dir ./output
+    python data_explore.py --mode clean --data-dir ./output --dry-run
+"""
+
+import os
+import json
+import cv2
+import shutil
+import argparse
+import subprocess
+from pathlib import Path
+from datetime import datetime
+from collections import defaultdict
+from typing import List, Dict, Tuple
+import pandas as pd
+
+
+def build_dataset_subset(input_json: str, categories: List[str], max_duration: float, 
+                        output_dir: str = 'json') -> None:
+    """
+    Build dataset subsets from TalkVid dataset by category and duration.
+    
+    Filters videos by specified categories and language, collecting up to max_duration
+    of content per category. Saves subset metadata to JSON files.
+    
+    Args:
+        input_json (str): Path to input JSON file containing video metadata
+        categories (List[str]): List of video categories to include
+        max_duration (float): Maximum total duration in seconds per category
+        output_dir (str): Output directory for subset JSON files (default: 'json')
+    
+    Returns:
+        None
+    
+    Examples:
+        >>> build_dataset_subset('filtered_video_clips.json', 
+        ...                      ['Personal Experience'], 14*3600, 'json')
+    """
+    # Load JSON data
+    with open(input_json, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    for cate in categories:
+        # Initialize statistics
+        category_stats = defaultdict(lambda: {'count': 0, 'total_duration': 0})
+        mini_dataset = []
+        
+        for item in data:
+            # Filter by category and language
+            if 'info' in item and 'Video Category' in item['info']:
+                category = item['info']['Video Category']
+                language = item['info'].get('Language', '')
+                
+                if category != cate or language != 'English':
+                    continue
+                
+                # Normalize category name
+                if category == "Online Course/Lecture":
+                    item['info']['Video Category'] = "Online Course"
+                    category = "Online Course"
+                
+                # Check duration limit
+                if category_stats[category]['total_duration'] > max_duration:
+                    continue
+                
+                mini_dataset.append(item)
+                category_stats[category]['count'] += 1
+                
+                # Calculate total duration
+                if 'durations' in item:
+                    if isinstance(item['durations'], list):
+                        total_duration = sum(float(d[:-1]) for d in item['durations'])
+                    else:
+                        total_duration = float(item['durations'][:-1])
+                    category_stats[category]['total_duration'] += total_duration
+        
+        # Save subset to JSON
+        save_file_name = os.path.join(output_dir, 
+                                     f'{cate.lower().replace("/", "_").replace(" ", "_")}_video_clips.json')
+        with open(save_file_name, 'w', encoding='utf-8') as f:
+            json.dump(mini_dataset, f, ensure_ascii=False, indent=4)
+        
+        # Print statistics
+        print(f"\n{'='*80}")
+        print(f"Category: {cate}")
+        print(f"{'='*80}")
+        print(f"{'Category':<30} {'Count':<10} {'Duration(s)':<15} {'Duration(m)':<15}")
+        print(f"{'-'*80}")
+        
+        for category, stats in sorted(category_stats.items()):
+            count = stats['count']
+            duration_seconds = stats['total_duration']
+            duration_minutes = duration_seconds / 60
+            print(f"{category:<30} {count:<10} {duration_seconds:<15.2f} {duration_minutes:<15.2f}")
+        
+        data_scale = sum(stats['total_duration'] for stats in category_stats.values())
+        print(f"{'='*80}")
+        print(f"Total categories: {len(category_stats)}")
+        print(f"Total items: {sum(stats['count'] for stats in category_stats.values())}")
+        print(f"Total duration: {data_scale:.2f}s / {data_scale/60:.2f}m / {data_scale/3600:.2f}h")
+        print(f"Saved to: {save_file_name}\n")
+
+
+def get_video_duration(video_path: Path) -> float:
+    """
+    Get video duration in seconds using OpenCV.
+    
+    Args:
+        video_path (Path): Path to video file
+    
+    Returns:
+        float: Duration in seconds, 0 if error occurs
+    
+    Examples:
+        >>> get_video_duration(Path('video.mp4'))
+        120.5
+    """
+    try:
+        cap = cv2.VideoCapture(str(video_path))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        cap.release()
+        if fps > 0:
+            return frame_count / fps
+        return 0
+    except Exception as e:
+        print(f"Error reading {video_path}: {e}")
+        return 0
+
+
+def analyze_dataset(data_root: str, output_csv: str = 'dataset_statistics.csv') -> Dict:
+    """
+    Analyze dataset statistics including duration, video count, and ID count.
+    
+    Traverses dataset directory structure, calculates total duration and counts
+    for each category. Generates detailed statistics table and saves to CSV.
+    
+    Args:
+        data_root (str): Root directory of dataset
+        output_csv (str): Output CSV file path (default: 'dataset_statistics.csv')
+    
+    Returns:
+        Dict: Statistics dictionary with category-level aggregations
+    
+    Directory Structure:
+        data_root/
+        ├── category1/
+        │   ├── id_001/
+        │   │   ├── video1.mp4
+        │   │   └── video2.mp4
+        │   └── id_002/
+        └── category2/
+    
+    Examples:
+        >>> stats = analyze_dataset('./output')
+        >>> print(stats['Personal Experience']['video_count'])
+    """
+    data_root = Path(data_root)
+    
+    # Initialize statistics storage
+    stats = defaultdict(lambda: {'ids': set(), 'total_duration': 0, 'video_count': 0})
+    
+    # Supported video formats
+    video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv'}
+    
+    # Traverse dataset
+    if not data_root.exists():
+        print(f"Data directory does not exist: {data_root}")
+        return None
+    
+    for category_dir in sorted(data_root.iterdir()):
+        if not category_dir.is_dir():
+            continue
+        
+        category = category_dir.name
+        print(f"Processing category: {category}")
+        
+        for id_dir in category_dir.iterdir():
+            if not id_dir.is_dir():
+                continue
+            
+            id_name = id_dir.name
+            stats[category]['ids'].add(id_name)
+            
+            # Count all videos under this ID
+            for video_file in id_dir.iterdir():
+                if video_file.suffix.lower() in video_extensions:
+                    duration = get_video_duration(video_file)
+                    stats[category]['total_duration'] += duration
+                    stats[category]['video_count'] += 1
+                    print(f"  - {category}/{id_name}/{video_file.name}: {duration:.2f}s")
+    
+    # Generate statistics tables
+    if stats:
+        results = []
+        for category, info in sorted(stats.items()):
+            results.append({
+                'Category': category,
+                'ID Count': len(info['ids']),
+                'Video Count': info['video_count'],
+                'Total Duration(s)': round(info['total_duration'], 2),
+                'Total Duration(m)': round(info['total_duration'] / 60, 2),
+                'Total Duration(h)': round(info['total_duration'] / 3600, 2)
+            })
+        
+        df = pd.DataFrame(results)
+        
+        # Add total row
+        total_row = {
+            'Category': 'Total',
+            'ID Count': df['ID Count'].sum(),
+            'Video Count': df['Video Count'].sum(),
+            'Total Duration(s)': round(df['Total Duration(s)'].sum(), 2),
+            'Total Duration(m)': round(df['Total Duration(m)'].sum(), 2),
+            'Total Duration(h)': round(df['Total Duration(h)'].sum(), 2)
+        }
+        df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+        
+        print("\n=== Dataset Statistics ===")
+        print(df.to_string(index=False))
+        
+        # Create average statistics table
+        avg_results = []
+        for category, info in sorted(stats.items()):
+            avg_duration_per_video = info['total_duration'] / info['video_count'] if info['video_count'] > 0 else 0
+            avg_duration_per_id = info['total_duration'] / len(info['ids']) if len(info['ids']) > 0 else 0
+            avg_results.append({
+                'Category': category,
+                'Avg Duration/Video(s)': round(avg_duration_per_video, 2),
+                'Avg Duration/ID(m)': round(avg_duration_per_id / 60, 2),
+                'Avg Videos/ID': round(info['video_count'] / len(info['ids']), 2) if len(info['ids']) > 0 else 0
+            })
+        
+        df2 = pd.DataFrame(avg_results)
+        
+        # Create separator columns
+        empty_cols = pd.DataFrame({'': [''] * len(df), ' ': [''] * len(df), '  ': [''] * len(df)})
+        
+        # Combine tables horizontally
+        combined_df = pd.concat([df, empty_cols, df2], axis=1)
+        
+        # Save to CSV
+        combined_df.to_csv(output_csv, index=False, encoding='utf-8-sig')
+        print(f"\nStatistics saved to {output_csv}")
+    else:
+        print("No data found or analysis failed")
+    
+    return stats
+
+
+def merge_video_audio(data_dir: str, dry_run: bool = True) -> Tuple[int, int]:
+    """
+    Merge separate video and audio files into single MP4 files.
+    
+    Searches for .mp4 video files and corresponding .m4a audio files,
+    then merges them using FFmpeg. Skips files that are already merged.
+    
+    Args:
+        data_dir (str): Root directory containing video/audio files
+        dry_run (bool): If True, only preview without actual merging (default: True)
+    
+    Returns:
+        Tuple[int, int]: (merged_count, skipped_count)
+    
+    File Structure:
+        data_dir/
+        └── category/
+            └── id/
+                ├── scene_1.mp4
+                ├── scene_1.m4a
+                └── scene_1_merged.mp4 (output)
+    
+    Examples:
+        >>> merged, skipped = merge_video_audio('./output', dry_run=False)
+        >>> print(f"Merged {merged} files, skipped {skipped}")
+    """
+    output_dir = Path(data_dir)
+    merged_count = 0
+    skipped_count = 0
+    
+    # Traverse all category folders
+    for class_folder in output_dir.iterdir():
+        if class_folder.is_dir() and class_folder.name not in ['logs', 'json_logs']:
+            # Traverse each ID folder
+            for id_folder in class_folder.iterdir():
+                if id_folder.is_dir():
+                    # Find all mp4 video files
+                    for video_file in id_folder.glob("*.mp4"):
+                        # Skip already merged files
+                        if '_merged' in video_file.stem:
+                            continue
+                        
+                        # Build corresponding audio filename
+                        audio_file = video_file.with_suffix('.m4a')
+                        
+                        # Check if audio file exists
+                        if not audio_file.exists():
+                            print(f"Skip: {video_file.name} - Audio file not found")
+                            skipped_count += 1
+                            continue
+                        
+                        # Build merged filename
+                        merged_file = video_file.with_name(f"{video_file.stem}_merged.mp4")
+                        
+                        # Skip if merged file already exists
+                        if merged_file.exists():
+                            print(f"Exists: {merged_file.name}")
+                            continue
+                        
+                        if dry_run:
+                            print(f"[Preview] Will merge: {video_file.name} + {audio_file.name} -> {merged_file.name}")
+                            merged_count += 1
+                            continue
+                        
+                        # Use ffmpeg to merge video and audio
+                        try:
+                            cmd = [
+                                'ffmpeg',
+                                '-i', str(video_file),
+                                '-i', str(audio_file),
+                                '-c:v', 'copy',
+                                '-c:a', 'aac',
+                                '-strict', 'experimental',
+                                '-y',  # Overwrite output file
+                                str(merged_file)
+                            ]
+                            
+                            result = subprocess.run(cmd, capture_output=True, text=True)
+                            
+                            if result.returncode == 0:
+                                print(f"Successfully merged: {video_file.name} -> {merged_file.name}")
+                                merged_count += 1
+                            else:
+                                print(f"Merge failed: {video_file.name} - {result.stderr}")
+                                skipped_count += 1
+                        
+                        except Exception as e:
+                            print(f"Processing error {video_file.name}: {e}")
+                            skipped_count += 1
+    
+    print(f"\n=== Merge {'Preview' if dry_run else 'Complete'} ===")
+    print(f"{'Will merge' if dry_run else 'Merged'}: {merged_count} files")
+    print(f"Skipped: {skipped_count} files")
+    
+    if dry_run:
+        print("\n⚠️ Preview mode - no files were actually merged")
+        print("To execute merge, run with --no-dry-run")
+    
+    return merged_count, skipped_count
+
+
+def clean_non_mp4_files(data_dir: str, create_backup: bool = True, 
+                       dry_run: bool = True) -> Tuple[int, List[str]]:
+    """
+    Clean non-MP4 files from dataset with optional backup.
+    
+    Removes all files that are not .mp4 format. Optionally creates backup
+    before deletion and supports dry-run mode for preview.
+    
+    Args:
+        data_dir (str): Root directory to clean
+        create_backup (bool): Whether to create backup before deletion (default: True)
+        dry_run (bool): If True, only preview without actual deletion (default: True)
+    
+    Returns:
+        Tuple[int, List[str]]: (deleted_count, list of deleted file paths)
+    
+    Examples:
+        >>> count, files = clean_non_mp4_files('./output', create_backup=True, dry_run=False)
+        >>> print(f"Deleted {count} files")
+    """
+    output_dir = Path(data_dir)
+    deleted_count = 0
+    deleted_files = []
+    
+    # Create backup directory
+    backup_dir = None
+    if create_backup and not dry_run:
+        backup_dir = Path(f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        backup_dir.mkdir(exist_ok=True)
+        print(f"Backup directory: {backup_dir}\n")
+    
+    # Traverse all category folders
+    for class_folder in output_dir.iterdir():
+        if class_folder.is_dir() and class_folder.name not in ['logs', 'json_logs']:
+            # Traverse each video folder
+            for video_folder in class_folder.iterdir():
+                if video_folder.is_dir():
+                    # Traverse all files in folder
+                    for file in video_folder.iterdir():
+                        if file.is_file() and file.suffix.lower() != '.mp4':
+                            deleted_files.append(str(file))
+                            
+                            # Backup file
+                            if create_backup and not dry_run and backup_dir:
+                                backup_path = backup_dir / file.relative_to(output_dir)
+                                backup_path.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy2(file, backup_path)
+                            
+                            # Delete file
+                            if dry_run:
+                                print(f"[Preview] Will delete: {file.relative_to(output_dir)}")
+                            else:
+                                try:
+                                    file.unlink()
+                                    deleted_count += 1
+                                    print(f"Deleted: {file.relative_to(output_dir)}")
+                                except Exception as e:
+                                    print(f"Delete failed {file.name}: {e}")
+    
+    print(f"\n=== {'Preview' if dry_run else 'Cleaning'} Complete ===")
+    if dry_run:
+        print(f"Found {len(deleted_files)} non-MP4 files")
+        print("\n⚠️ Preview mode - no files were actually deleted")
+        print("To execute deletion, run with --no-dry-run")
+    else:
+        print(f"Deleted {deleted_count} non-MP4 files")
+        if create_backup and backup_dir:
+            print(f"Backup location: {backup_dir}")
+    
+    # Print file type statistics
+    if len(deleted_files) > 0:
+        print(f"\nDeleted file type statistics:")
+        extensions = {}
+        for file_path in deleted_files:
+            ext = Path(file_path).suffix.lower()
+            extensions[ext] = extensions.get(ext, 0) + 1
+        
+        for ext, count in sorted(extensions.items()):
+            print(f"  {ext if ext else '(no extension)'}: {count} files")
+    
+    return deleted_count, deleted_files
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Audio-Visual Dataset Exploration and Processing Tools")
+    
+    # Mode selection
+    parser.add_argument("--mode", type=str, required=True,
+                       choices=['build-subset', 'analyze', 'merge', 'clean'],
+                       help="Operation mode: build-subset, analyze, merge, or clean")
+    
+    # Common arguments
+    parser.add_argument("--data-dir", type=str, default='./output',
+                       help="Data directory path (default: ./output)")
+    parser.add_argument("--dry-run", action='store_true',
+                       help="Preview mode without actual modifications")
+    
+    # build-subset specific arguments
+    parser.add_argument("--input", type=str, default='json/filtered_video_clips.json',
+                       help="Input JSON file for subset building")
+    parser.add_argument("--categories", type=str, nargs='+',
+                       default=['Personal Experience', 'Online Course/Lecture'],
+                       help="Categories to include in subset")
+    parser.add_argument("--max-duration", type=float, default=14*3600,
+                       help="Maximum duration per category in seconds (default: 14 hours)")
+    parser.add_argument("--output-dir", type=str, default='json',
+                       help="Output directory for JSON files (default: json)")
+    
+    # analyze specific arguments
+    parser.add_argument("--output-csv", type=str, default='dataset_statistics.csv',
+                       help="Output CSV file for statistics (default: dataset_statistics.csv)")
+    
+    # clean specific arguments
+    parser.add_argument("--no-backup", action='store_true',
+                       help="Don't create backup when cleaning files")
+    
+    args = parser.parse_args()
+    
+    # Execute corresponding function based on mode
+    if args.mode == 'build-subset':
+        print(f"Building dataset subset from {args.input}...")
+        print(f"Categories: {args.categories}")
+        print(f"Max duration: {args.max_duration/3600:.1f} hours per category")
+        build_dataset_subset(args.input, args.categories, args.max_duration, args.output_dir)
+    
+    elif args.mode == 'analyze':
+        print(f"Analyzing dataset in {args.data_dir}...")
+        analyze_dataset(args.data_dir, args.output_csv)
+    
+    elif args.mode == 'merge':
+        print(f"Merging video and audio files in {args.data_dir}...")
+        if args.dry_run:
+            print("Running in DRY-RUN mode (preview only)")
+        merge_video_audio(args.data_dir, args.dry_run)
+    
+    elif args.mode == 'clean':
+        print(f"Cleaning non-MP4 files from {args.data_dir}...")
+        if args.dry_run:
+            print("Running in DRY-RUN mode (preview only)")
+        clean_non_mp4_files(args.data_dir, not args.no_backup, args.dry_run)

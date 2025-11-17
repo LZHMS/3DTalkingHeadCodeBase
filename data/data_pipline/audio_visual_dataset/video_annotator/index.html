@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube 视频片段标注工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>YouTube 视频片段标注工具</h1>
+        </header>
+
+        <div class="main-content">
+            <!-- 视频列表侧边栏 -->
+            <aside class="video-list">
+                <h2>视频列表</h2>
+                <div class="file-upload-section">
+                    <label for="fileInput" class="upload-btn">
+                        📁 上传 .txt 文件
+                    </label>
+                    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                    <div id="fileInfo" class="file-info"></div>
+                </div>
+                <div id="videoListContainer"></div>
+            </aside>
+
+            <!-- 主工作区 -->
+            <main class="workspace">
+                <!-- 视频播放器 -->
+                <div class="player-section">
+                    <div id="player"></div>
+                    <div class="player-controls">
+                        <button id="playPauseBtn">播放/暂停 (空格)</button>
+                        <span id="currentTime">00:00:00</span> / <span id="duration">00:00:00</span>
+                        <button id="slowDown">0.5x</button>
+                        <button id="normalSpeed">1x</button>
+                        <button id="speedUp">1.5x</button>
+                    </div>
+                </div>
+
+                <!-- 时间轴缩略图 -->
+                <div class="timeline-section">
+                    <h3>视频时间轴 (点击快速跳转)</h3>
+                    <canvas id="timelineCanvas"></canvas>
+                    <div class="timeline-markers" id="timelineMarkers"></div>
+                </div>
+
+                <!-- 标注控制面板 -->
+                <div class="annotation-panel">
+                    <h3>片段标注</h3>
+                    <div class="time-controls">
+                        <div class="time-input-group">
+                            <label>起始时间:</label>
+                            <input type="text" id="startTime" placeholder="00:00:00" readonly>
+                            <button id="setStartBtn">设置起点 (I)</button>
+                            <button id="jumpStartBtn">跳转</button>
+                        </div>
+                        <div class="time-input-group">
+                            <label>结束时间:</label>
+                            <input type="text" id="endTime" placeholder="00:00:00" readonly>
+                            <button id="setEndBtn">设置终点 (O)</button>
+                            <button id="jumpEndBtn">跳转</button>
+                        </div>
+                    </div>
+                    <div class="segment-controls">
+                        <input type="text" id="segmentLabel" placeholder="片段标签 (可选)">
+                        <button id="addSegmentBtn">添加片段 (Enter)</button>
+                        <button id="previewSegmentBtn">预览片段</button>
+                    </div>
+                </div>
+
+                <!-- 标注列表 -->
+                <div class="segments-list">
+                    <h3>已标注片段</h3>
+                    <div id="segmentsList"></div>
+                    <div class="export-controls">
+                        <button id="exportJsonBtn">导出 JSON</button>
+                        <button id="clearAllBtn">清空所有</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
