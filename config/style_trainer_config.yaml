@@ -1,0 +1,66 @@
+ENV:
+  SEED: 2025
+  NAME: StyleEncoder_Trainer
+  DESCRIPTION: Train the style encoder of DiffPoseTalk.
+  OUTPUT_DIR: ./output
+  VERBOSE: True
+
+DATASET:
+  NAME: HDTF_TFHP
+  ROOT: ./data/
+  HDTF_TFHP:
+    COEF_STATS: "stats_train.npz"
+    TRAIN: "train.txt"
+    VAL: "val.txt"
+    TEST: "test.txt"
+    COEF_FPS: 25      # frames per second for coefficients (sequence fps)
+    MOTIONS: 100      # number of motions per sample
+    CROP: "random"    # crop strategy
+    AUDIO_SR: 16000   # audio sampling rate
+
+DATALOADER:
+  NUM_WORKERS: 4
+  TRAIN:
+    BATCH_SIZE: 32
+  TEST:
+    BATCH_SIZE: 64
+
+MODEL:
+  NAME: StyleEncoder
+  HEAD:
+    ROT_REPR: 'aa'
+    NO_HEAD_POSE: False
+  BACKBONE:
+    NAME: TransformerEncoder
+    IN_DIM: 50
+    HIDDEN_SIZE: 128
+    NUM_HIDDEN_LAYERS: 4
+    NUM_ATTENTION_HEADS: 4
+  TAIL:
+    MLP_RATIO: 4
+
+LOSS:
+  NAME: "NTXentLoss"
+  CONTRASTIVE:
+    TEMPRATURE: 0.1
+
+TRAINER:
+  NAME: StyleEncoderTrainer
+
+TRAIN:
+  USE_ITERS: True
+  MAX_ITERS: 100000
+  PRINT_FREQ: 50
+  SAVE_FREQ: 2000
+  EVALUATE: True
+  EVAL_FREQ: 2000
+
+OPTIM:
+  NAME: "adam"
+  LR: 0.0001
+  LR_SCHEDULER: "cosine"
+  LR_UPDATE_FREQ: 1
+
+TEST:
+  NO_TEST: False
+  EVALUATOR: CodeTalkerEvaluator

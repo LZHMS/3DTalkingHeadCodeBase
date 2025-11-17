@@ -1,0 +1,33 @@
+.vscode/
+.history/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# model
+model.pth.tar-iter-*
+checkpoint
+
+# wandb files
+wandb
+
+# tensorboard
+tensorboard/
+
+pretrained/
+
+# ignore the data
+HDTF_TFHP/
+VOCASET/
+TalkingScene/
+models/Avatar/data/
+
+node_modules/
+
+# ignore the largest json files
+filtered_video_clips_with_captions.json
+filtered_video_clips.json
+mini_filtered_video_clips_with_captions.json

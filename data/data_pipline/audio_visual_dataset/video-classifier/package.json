@@ -1,0 +1,13 @@
+{
+  "name": "video-classification",
+  "version": "1.0.0",
+  "description": "视频分类系统",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1"
+  }
+}

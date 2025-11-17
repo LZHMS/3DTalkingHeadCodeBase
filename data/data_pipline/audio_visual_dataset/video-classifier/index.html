@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频分类工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4CAF50;
+        }
+        .video-container {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        video {
+            width: 100%;
+            max-height: 600px;
+            border-radius: 5px;
+        }
+        .info {
+            margin: 15px 0;
+            font-size: 18px;
+        }
+        .source-category {
+            display: inline-block;
+            background: #4CAF50;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .category-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .category-buttons button {
+            flex: 1;
+            min-width: 150px;
+        }
+        .skip-button {
+            background: #6c757d;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .skip-button:hover {
+            background: #5a6268;
+        }
+        button {
+            padding: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .btn-1 { background: #2196F3; color: white; }
+        .btn-2 { background: #FF9800; color: white; }
+        .btn-3 { background: #9C27B0; color: white; }
+        .btn-4 { background: #F44336; color: white; }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+        }
+        .progress {
+            margin-top: 10px;
+            color: #4CAF50;
+        }
+        .category-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .new-category {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .new-category input {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            flex: 1;
+        }
+        .new-category button {
+            border-color: #28a745;
+        }
+        .new-category button:hover {
+            background: #28a745;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .source-category-selector {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .source-category-selector h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+        .source-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .source-button {
+            padding: 12px 20px;
+            background: #444;
+            color: white;
+            border: 2px solid transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .source-button:hover {
+            background: #555;
+        }
+        .source-button.active {
+            background: #4CAF50;
+            border-color: #45a049;
+        }
+        .source-button .progress-badge {
+            display: inline-block;
+            background: #FF9800;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .navigation-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .prev-button {
+            background: #17a2b8;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            flex: 1;
+        }
+        .prev-button:hover {
+            background: #138496;
+        }
+        .prev-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>视频分类工具</h1>
+        
+        <div class="source-category-selector">
+            <h3>选择视频来源类别:</h3>
+            <div class="source-buttons" id="sourceButtons"></div>
+        </div>
+        
+        <div class="video-container">
+            <video id="videoPlayer" controls autoplay></video>
+            <div class="info">
+                <p>当前视频: <span id="currentVideo">加载中...</span>
+                   <span id="sourceCategory" class="source-category"></span>
+                </p>
+                <p>文件名: <span id="currentFileName">-</span></p>
+                <p>剩余视频: <span id="remainingCount">0</span></p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="navigation-buttons">
+                <button class="prev-button" id="prevButton" onclick="loadPreviousVideo()">
+                    ← 上一个视频 (按 ← 键)
+                </button>
+                <button class="skip-button" onclick="skipVideo()" style="flex: 1;">
+                    跳过此视频 (按 S 或 空格键)
+                </button>
+            </div>
+            
+            <div>
+                <h3>选择分类:</h3>
+                <div class="category-buttons" id="categoryButtons"></div>
+            </div>
+            
+            <div class="new-category">
+                <input type="text" id="newCategoryName" placeholder="输入新类别名称">
+                <button onclick="createNewCategory()">新建类别并分类</button>
+            </div>
+        </div>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        let allVideoList = [];
+        let videoListBySource = {};
+        let sourceProgress = {}; // 保存每个来源类别的进度
+        let currentSourceCategory = null;
+        let categories = {};
+        let currentVideoInfo = null; // 保存当前视频信息
+
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                categories = await response.json();
+                renderCategoryButtons();
+            } catch (error) {
+                showMessage('加载类别失败: ' + error.message, 'error');
+            }
+        }
+
+        function renderCategoryButtons() {
+            const container = document.getElementById('categoryButtons');
+            container.innerHTML = '';
+            
+            for (const [id, name] of Object.entries(categories)) {
+                const button = document.createElement('button');
+                button.textContent = `${id}. ${name}`;
+                button.onclick = () => classifyVideo(id);
+                container.appendChild(button);
+            }
+        }
+
+        async function loadVideos() {
+            try {
+                const response = await fetch('/api/videos');
+                allVideoList = await response.json();
+                
+                // 按来源类别分组
+                videoListBySource = {};
+                allVideoList.forEach(video => {
+                    if (!videoListBySource[video.sourceCategory]) {
+                        videoListBySource[video.sourceCategory] = [];
+                        sourceProgress[video.sourceCategory] = 0;
+                    }
+                    videoListBySource[video.sourceCategory].push(video);
+                });
+                
+                // 渲染来源类别按钮
+                renderSourceButtons();
+                
+                // 选择第一个来源类别
+                const firstSource = Object.keys(videoListBySource)[0];
+                if (firstSource) {
+                    switchSourceCategory(firstSource);
+                } else {
+                    showMessage('没有找到视频文件', 'error');
+                }
+            } catch (error) {
+                showMessage('加载视频列表失败: ' + error.message, 'error');
+            }
+        }
+
+        function renderSourceButtons() {
+            const container = document.getElementById('sourceButtons');
+            container.innerHTML = '';
+            
+            for (const [source, videos] of Object.entries(videoListBySource)) {
+                const button = document.createElement('button');
+                button.className = 'source-button';
+                
+                const progress = sourceProgress[source];
+                const total = videos.length;
+                const remaining = total - progress;
+                
+                button.innerHTML = `${source} <span class="progress-badge">${remaining}/${total}</span>`;
+                button.onclick = () => switchSourceCategory(source);
+                
+                if (source === currentSourceCategory) {
+                    button.classList.add('active');
+                }
+                
+                container.appendChild(button);
+            }
+        }
+
+        function switchSourceCategory(source) {
+            currentSourceCategory = source;
+            renderSourceButtons();
+            loadCurrentVideo();
+        }
+
+        function loadCurrentVideo() {
+            const videos = videoListBySource[currentSourceCategory];
+            const index = sourceProgress[currentSourceCategory];
+            
+            if (!videos || index >= videos.length) {
+                showMessage(`${currentSourceCategory} 类别的视频已全部分类完成!`, 'success');
+                document.getElementById('videoPlayer').src = '';
+                currentVideoInfo = null;
+                updateInfo();
+                updatePrevButton();
+                return;
+            }
+
+            const video = videos[index];
+            currentVideoInfo = video; // 保存当前视频信息
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            videoPlayer.src = `/videos/${video.path}`;
+            updateInfo();
+            updatePrevButton();
+            videoPlayer.play().catch(err => {
+                console.error('视频播放失败:', err);
+            });
+        }
+
+        function updateInfo() {
+            const videos = videoListBySource[currentSourceCategory];
+            const index = sourceProgress[currentSourceCategory];
+            
+            if (videos && index < videos.length) {
+                const video = videos[index];
+                document.getElementById('currentVideo').textContent = video.name;
+                document.getElementById('sourceCategory').textContent = `来源: ${video.sourceCategory}`;
+                document.getElementById('currentFileName').textContent = video.videoFile;
+                document.getElementById('remainingCount').textContent = videos.length - index;
+            } else {
+                document.getElementById('currentVideo').textContent = '无';
+                document.getElementById('sourceCategory').textContent = '';
+                document.getElementById('currentFileName').textContent = '-';
+                document.getElementById('remainingCount').textContent = '0';
+            }
+        }
+
+        function updatePrevButton() {
+            const prevButton = document.getElementById('prevButton');
+            const videos = videoListBySource[currentSourceCategory];
+            const index = sourceProgress[currentSourceCategory];
+            
+            // 如果是第一个视频或没有视频,禁用上一个按钮
+            prevButton.disabled = !videos || index === 0;
+        }
+
+        async function classifyVideo(categoryId) {
+            const videos = videoListBySource[currentSourceCategory];
+            const index = sourceProgress[currentSourceCategory];
+            
+            if (!videos || index >= videos.length) return;
+
+            const video = videos[index];
+            showMessage('正在分类...', 'success');
+
+            try {
+                const response = await fetch('/api/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceCategory: video.sourceCategory,
+                        folderName: video.name,
+                        category: categoryId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    sourceProgress[currentSourceCategory]++;
+                    renderSourceButtons();
+                    setTimeout(() => loadCurrentVideo(), 1000);
+                } else {
+                    showMessage('分类失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('分类失败: ' + error.message, 'error');
+            }
+        }
+
+        async function createNewCategory() {
+            const input = document.getElementById('newCategoryName');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showMessage('请输入类别名称', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(`已创建新类别: ${result.name}`, 'success');
+                    input.value = '';
+                    categories[result.id] = result.name;
+                    renderCategoryButtons();
+                    
+                    // 自动分类到新类别
+                    await classifyVideo(result.id);
+                } else {
+                    showMessage('创建类别失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('创建类别失败: ' + error.message, 'error');
+            }
+        }
+
+        async function skipVideo() {
+            const videos = videoListBySource[currentSourceCategory];
+            const index = sourceProgress[currentSourceCategory];
+            
+            if (!videos || index >= videos.length) return;
+
+            const video = videos[index];
+            showMessage('正在跳过...', 'success');
+
+            try {
+                const response = await fetch('/api/skip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceCategory: video.sourceCategory,
+                        folderName: video.name,
+                        videoFile: video.videoFile,
+                        fullPath: video.fullPath
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message + ` (总计跳过: ${result.totalSkipped})`, 'success');
+                    sourceProgress[currentSourceCategory]++;
+                    renderSourceButtons();
+                    setTimeout(() => loadCurrentVideo(), 800);
+                } else {
+                    showMessage('跳过失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('跳过失败: ' + error.message, 'error');
+            }
+        }
+
+        async function loadPreviousVideo() {
+            if (!currentVideoInfo) {
+                showMessage('无法获取当前视频信息', 'error');
+                return;
+            }
+
+            showMessage('正在加载上一个视频...', 'success');
+
+            try {
+                const response = await fetch('/api/videos/previous', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currentSourceCategory: currentVideoInfo.sourceCategory,
+                        currentFolderName: currentVideoInfo.name
+                    })
+                });
+
+                if (response.ok) {
+                    const previousVideo = await response.json();
+                    
+                    // 更新进度
+                    if (sourceProgress[currentSourceCategory] > 0) {
+                        sourceProgress[currentSourceCategory]--;
+                    }
+                    
+                    // 如果上一个视频在不同的来源类别,切换类别
+                    if (previousVideo.sourceCategory !== currentSourceCategory) {
+                        currentSourceCategory = previousVideo.sourceCategory;
+                    }
+                    
+                    renderSourceButtons();
+                    loadCurrentVideo();
+                    showMessage('已加载上一个视频', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || '没有上一个视频', 'error');
+                }
+            } catch (error) {
+                showMessage('加载上一个视频失败: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // 键盘快捷键支持
+        document.addEventListener('keydown', (e) => {
+            // 跳过功能: 空格键或S键
+            if (e.code === 'Space' || e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                skipVideo();
+                return;
+            }
+            
+            // 上一个视频: 左箭头键
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                loadPreviousVideo();
+                return;
+            }
+            
+            // Tab键切换到下一个来源类别
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const sources = Object.keys(videoListBySource);
+                const currentIndex = sources.indexOf(currentSourceCategory);
+                const nextIndex = (currentIndex + 1) % sources.length;
+                switchSourceCategory(sources[nextIndex]);
+                return;
+            }
+            
+            // 分类快捷键
+            const categoryIds = Object.keys(categories);
+            const keyIndex = categoryIds.findIndex(id => id === e.key);
+            if (keyIndex !== -1) {
+                classifyVideo(e.key);
+            }
+        });
+
+        // 页面加载时初始化
+        window.onload = async () => {
+            await loadCategories();
+            await loadVideos();
+        };
+    </script>
+</body>
+</html>
+``` 
