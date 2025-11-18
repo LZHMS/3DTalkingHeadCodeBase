@@ -7,6 +7,10 @@ export https_proxy="http://127.0.0.1:7890"
 # python data_explore.py --mode build-json --data-dir json/source_txt --output-dir json
 
 # step 2: download the video clips listed in the merged json file
-python download_clips.py --input_json_path json/builded_Lecture_Speech.json \
-  --output_dir output \
-  --workers 8 --cleanup --full_download
+# python raw.py --input_json_path json/online_course_lecture_video_clips.json \
+#   --output_dir output \
+#   --workers 8 --cleanup
+
+python download_video.py --input json/builded_Lecture_Speech.json \
+  --output output \
+  --workers 8

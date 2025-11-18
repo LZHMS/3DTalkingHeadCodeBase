@@ -79,6 +79,7 @@ class YTDLPDownloader:
         """
         self.args = args
         self.full_download = args.full_download
+        self.output_dir = args.output_dir
 
         # Initialize logging directories
         self.logs_dir = os.path.join(args.output_dir, "download_logs")
@@ -262,7 +263,7 @@ class YTDLPDownloader:
         6. Closes progress bar display
         
         Side Effects:
-            - Creates JSON log files in self.json_logs_dir
+            - Creates JSON log files in self.json_dir
             - Appends to failed_segments_file for failures
             - Updates and closes progress bars
             - Prints error messages to console
@@ -299,7 +300,7 @@ class YTDLPDownloader:
                     start, end = seg_tuple
                     log_filename = f"{video_id}_full.json".replace(":", "-") if self.full_download \
                                     else f"{video_id}_{start:.3f}_{end:.3f}.json".replace(":", "-")
-                    log_file = os.path.join(self.json_logs_dir, log_filename)
+                    log_file = os.path.join(self.json_dir, log_filename)
 
                     log_data = {"source_info": {
                                     "url": url0,
@@ -423,6 +424,7 @@ class YTDLPDownloader:
 
         return results
 
+
     def run_yt_dlp_download_segments(self, url, segments) -> Tuple[int, str]:
         """
         Execute yt-dlp to download segments from a single URL.
@@ -475,75 +477,208 @@ class YTDLPDownloader:
         else:
             output_template = os.path.join(video_output_dir, "%(id)s_full.%(ext)s", )
         
-        # Define format trials with fallback options
-        format_trials = [
-            {
-                # Trial 0: Preferred format (ideal)
-                "format": "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
-                "extra_flags": [
-                    "--merge-output-format", "mp4",
-                ],
-                "continue_flag": ["--no-continue", "--no-overwrites"],
-            },
-            {
-                # Trial 1: Fallback format (more lenient)
-                "format": "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
-                "extra_flags": [
-                    "--remux-video", "mp4",
-                ],
-                "continue_flag": ["-c", "--no-overwrites"],
-            },
-        ]
         section_args: List[str] = []
         if not self.full_download:
             for (start, end) in segments:
                 s_str, e_str = seconds_to_time_string(start), seconds_to_time_string(end)
                 section_args.extend(["--download-sections", f"*{s_str}-{e_str}"])
 
-        # Try each format until success
-        last_err = ""
-        for trial in format_trials:
-            # Construct yt-dlp command
-            cmd: List[str] = [
-                *base_cmd,
-                "-4", "--ignore-config", "--no-playlist",
-                "--retries", "10", "--fragment-retries", "10",
-                "--concurrent-fragments", "8", "-N", "4",
-                "--no-warnings", "--restrict-filenames",
-                *trial["continue_flag"],
-                "--print", "after_move:filepath",  # Print final file paths
-                "--write-subs", "--write-auto-subs", "--write-description",
-                "--extract-audio", "--audio-format", "m4a",
-                "--audio-quality", "0", "--keep-video",
-                "--no-keep-fragments", "--clean-info-json",
-                "-o", output_template,
-                "-f", trial["format"],
-                *trial["extra_flags"],
-            ]
+        cmd: List[str] = [
+            *base_cmd,
+            "-4",
+            "--ignore-config",
+            "--no-playlist",
+            "--retries", "10",
+            "--fragment-retries", "10",
+            "--concurrent-fragments", "8",
+            "-N", "4",
+            "--no-warnings",
+            "--restrict-filenames",
+            "--no-continue", "--no-overwrites",
+            # --- 新增功能 ---
+            "--print", "after_move:filepath", # 打印最终文件路径
+            "--write-subs",
+            "--write-auto-subs",
+            "--write-description",
+            "--extract-audio",
+            "--audio-format", "m4a", "--audio-quality", "0",
+            "--keep-video",
+            "--no-keep-fragments",  # 不保留中间文件
+            "--clean-info-json",  # 清理信息文件
+            # --- 输出模板 ---
+            "-o", output_template,
+            # 尽量拿到 H.264+AAC，可无损 remux；退化到 best 也能跑
+            # "-s", "vcodec:h264,res,acodec:aac",
+            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+            "--merge-output-format", "mp4", 
+        ]
+        if self.args.strict_cuts:
+            cmd.append("--force-keyframes-at-cuts")
 
-            if self.args.strict_cuts:
-                cmd.append("--force-keyframes-at-cuts")
-            if self.args.extractor_args:
-                cmd.extend(["--extractor-args", self.args.extractor_args])
+        if self.args.extractor_args:
+            cmd.extend(["--extractor-args", self.args.extractor_args])
 
-            cmd.extend(section_args)
-            cmd.append(url)
+        cmd.extend(section_args)
+        cmd.append(url)
 
-            # Execute yt-dlp command
-            try:
-                proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-            except Exception as exc:  # noqa: BLE001
-                return 1, f"yt-dlp failed: {exc}"
-
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
             if proc.returncode == 0:
                 return 0, proc.stdout.strip()
+            err_msg = (proc.stderr.strip() or proc.stdout.strip())
+            if "Requested format is not available" in err_msg:
+                fallback_cmd = [
+                    *base_cmd,
+                    "-4", "--ignore-config", "--no-playlist",
+                    "--retries", "10", "--fragment-retries", "10",
+                    "--concurrent-fragments", "8", "-N", "4",
+                    "--no-warnings", "--restrict-filenames",
+                    "-c", "--no-overwrites",
+                    # --- 新增功能 (回退) ---
+                    "--print", "after_move:filepath",
+                    "--write-subs", "--write-auto-subs", "--write-description",
+                    "--extract-audio", "--audio-format", "m4a", "--keep-video",
+                    # --- 输出模板 (回退) ---
+                    "-o", output_template,
+                    "-f", "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
+                    "--remux-video", "mp4",
+                ]
+                if self.args.strict_cuts:
+                    fallback_cmd.append("--force-keyframes-at-cuts")
+                if self.args.extractor_args:
+                    fallback_cmd.extend(["--extractor-args", self.args.extractor_args])
+                fallback_cmd.extend(section_args)
+                fallback_cmd.append(url)
 
-            # Check if we should try next format
-            last_err = (proc.stderr.strip() or proc.stdout.strip())
-            if "Requested format is not available" not in last_err:
-                break
+                proc2 = subprocess.run(fallback_cmd, capture_output=True, text=True, encoding='utf-8')
+                if proc2.returncode == 0:
+                    return 0, proc2.stdout.strip()
+                return proc2.returncode, (proc2.stderr.strip() or proc2.stdout.strip())
+            return proc.returncode, err_msg
+        except Exception as exc:  # noqa: BLE001
+            return 1, f"yt-dlp failed: {exc}"
 
-        return 1, last_err or "yt-dlp failed with unknown error"
+    # def run_yt_dlp_download_segments(self, url, segments) -> Tuple[int, str]:
+    #     """
+    #     Execute yt-dlp to download segments from a single URL.
+        
+    #     This method constructs and executes yt-dlp commands with multiple format trials.
+    #     It supports both full video downloads and segment-based downloads with precise cuts.
+        
+    #     Args:
+    #         url (str): Video URL to download from
+    #         segments (List[Tuple[float, float]]): List of time segments to download.
+    #             Empty list means full video download.
+        
+    #     Returns:
+    #         Tuple[int, str]: A tuple containing:
+    #             - return_code: 0 for success, 1 for failure
+    #             - message: stdout on success, error message on failure
+        
+    #     Notes:
+    #         - Uses multiple format trials with fallback options
+    #         - First trial: merge to mp4 format
+    #         - Second trial: remux to mp4 format (more lenient)
+    #         - Extracts separate audio track in m4a format
+    #         - Downloads subtitles and video description
+    #         - Creates output directory structure: output_dir/category/video_id/
+    #         - Filenames include segment info: {video_id}_{num}_{start}_{end}.{ext}
+    #         - For full downloads: {video_id}_full.{ext}
+        
+    #     Examples:
+    #         >>> rc, msg = downloader.run_yt_dlp_download_segments(url, [(0, 10), (10, 20)])
+    #         >>> if rc == 0:
+    #         ...     print(f"Success: {msg}")
+    #     """
+    #     base_cmd, err_info = get_yt_dlp_base_cmd(self.args.cookies, self.args.browser)
+    #     assert base_cmd, "Unable to locate yt-dlp"
+
+    #     video_id = get_video_id(url)
+    #     video_output_dir = os.path.join(self.output_dir, self.url2cate[url], video_id)
+    #     os.makedirs(video_output_dir, exist_ok=True)
+
+    #     # Construct segment download arguments
+    #     section_args: List[str] = []
+    #     if not self.full_download:
+    #         for (start, end) in segments:
+    #             s_str, e_str = seconds_to_time_string(start), seconds_to_time_string(end)
+    #             section_args.extend(["--download-sections", f"*{s_str}-{e_str}"])
+
+    #         output_template = os.path.join(video_output_dir,
+    #             "%(id)s_%(section_number)03d_%(section_start).3f_%(section_end).3f.%(ext)s",
+    #         )
+    #     else:
+    #         output_template = os.path.join(video_output_dir, "%(id)s_full.%(ext)s", )
+        
+    #     # Define format trials with fallback options
+    #     format_trials = [
+    #         {
+    #             # Trial 0: Preferred format (ideal)
+    #             "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+    #             "extra_flags": [
+    #                 "--merge-output-format", "mp4",
+    #             ],
+    #             "continue_flag": ["--no-continue", "--no-overwrites"],
+    #         },
+    #         {
+    #             # Trial 1: Fallback format (more lenient)
+    #             "format": "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
+    #             "extra_flags": [
+    #                 "--remux-video", "mp4",
+    #             ],
+    #             "continue_flag": ["-c", "--no-overwrites"],
+    #         },
+    #     ]
+    #     section_args: List[str] = []
+    #     if not self.full_download:
+    #         for (start, end) in segments:
+    #             s_str, e_str = seconds_to_time_string(start), seconds_to_time_string(end)
+    #             section_args.extend(["--download-sections", f"*{s_str}-{e_str}"])
+
+    #     # Try each format until success
+    #     last_err = ""
+    #     for trial in format_trials:
+    #         # Construct yt-dlp command
+    #         cmd: List[str] = [
+    #             *base_cmd,
+    #             "-4", "--ignore-config", "--no-playlist",
+    #             "--retries", "10", "--fragment-retries", "10",
+    #             "--concurrent-fragments", "8", "-N", "4",
+    #             "--no-warnings", "--restrict-filenames",
+    #             *trial["continue_flag"],
+    #             "--print", "after_move:filepath",  # Print final file paths
+    #             "--write-subs", "--write-auto-subs", "--write-description",
+    #             "--extract-audio", "--audio-format", "m4a",
+    #             "--audio-quality", "0", "--keep-video",
+    #             "--no-keep-fragments", "--clean-info-json",
+    #             "-o", output_template,
+    #             "-f", trial["format"],
+    #             *trial["extra_flags"],
+    #         ]
+
+    #         if self.args.strict_cuts:
+    #             cmd.append("--force-keyframes-at-cuts")
+    #         if self.args.extractor_args:
+    #             cmd.extend(["--extractor-args", self.args.extractor_args])
+
+    #         cmd.extend(section_args)
+    #         cmd.append(url)
+
+    #         # Execute yt-dlp command
+    #         try:
+    #             proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    #         except Exception as exc:  # noqa: BLE001
+    #             return 1, f"yt-dlp failed: {exc}"
+
+    #         if proc.returncode == 0:
+    #             return 0, proc.stdout.strip()
+
+    #         # Check if we should try next format
+    #         last_err = (proc.stderr.strip() or proc.stdout.strip())
+    #         if "Requested format is not available" not in last_err:
+    #             break
+
+    #     return 1, last_err or "yt-dlp failed with unknown error"
 
     def cleanup_final_files(self) -> None:
         """
@@ -624,11 +759,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download clips specified in a large JSON file directly with yt-dlp sections on Windows.")
     parser.add_argument("--input_json_path", type=str, default=os.path.join(os.getcwd(), "filtered_video_clips.json"), help="Path to the large JSON file containing 'Video Link', 'start-time', 'end-time' fields.")
     parser.add_argument("--output_dir", type=str, default=os.path.join(os.getcwd(), "clips_output"), help="Directory to store the downloaded clips.")
-    parser.add_argument("--mode", choices=["ytdlp"], default="ytdlp", help="仅支持 'ytdlp'，已移除 video2dataset 支持。")
+    parser.add_argument("--mode", choices=["ytdlp"], default="ytdlp", help="Only support 'ytdlp'")
     parser.add_argument("--limit", type=int, default=None, help="Process at most this many clip segments (for testing).")
     parser.add_argument("--workers", type=int, default=4, help="Concurrent workers for yt-dlp mode.")
     parser.add_argument("--cookies", type=str, default=os.path.join(os.getcwd(), "cookies.txt"), help="Path to cookies.txt to pass to yt-dlp if present.")
-    parser.add_argument("--browser", type=str, choices=["edge", "chrome", "firefox", "chromium", "brave", "vivaldi", "opera"], default=None, help="Use --cookies-from-browser <browser> for YouTube auth (recommended).")
+    parser.add_argument("--browser", type=str, default=None, help="Use --cookies-from-browser <browser> for YouTube auth (recommended).")
     parser.add_argument("--strict_cuts", type=bool, default=True, help="")
     parser.add_argument("--extractor_args", type=str, default=None, help="Pass through to yt-dlp --extractor-args, e.g. 'youtube:player_client=android'")
     parser.add_argument("--cleanup", action="store_true", help="Run cleanup process after downloading to remove unlogged files.")
