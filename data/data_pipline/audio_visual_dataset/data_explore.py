@@ -30,6 +30,12 @@ from collections import defaultdict
 from typing import List, Dict, Tuple
 import pandas as pd
 
+# Change relative import to handle both package and script execution
+try:
+    from .utils import get_video_id
+except ImportError:
+    from utils import get_video_id
+
 
 def build_dataset_subset(input_json: str, categories: List[str], max_duration: float, 
                         output_dir: str = 'json') -> None:
@@ -451,12 +457,44 @@ def clean_non_mp4_files(data_dir: str, create_backup: bool = True,
     return deleted_count, deleted_files
 
 
+def txt_to_json(src, json_path: str) -> None:
+    """
+    Convert text files with video URLs to a structured JSON format.
+    Args:
+        src (str): Source directory containing text files
+        json_path (str): Output JSON file path
+    Returns:
+        None
+    """
+
+    json_info, cates = [], ''
+    for file in os.listdir(src):
+        if not file.endswith('.txt'):
+            continue
+        
+        category = os.path.splitext(file)[0]
+        cates += f"_{category}"
+        with open(os.path.join(src, file), 'r', encoding='utf-8') as f_txt:
+            lines = f_txt.readlines()
+        for line in lines:
+            url = line.strip()
+            if url == '':
+                continue
+            item = {
+                "id": get_video_id(url),
+                "video link": url,
+                "video category": category
+            }
+            json_info.append(item)
+    with open(os.path.join(json_path, f"builded{cates}.json"), 'w', encoding='utf-8') as f_json:
+        json.dump(json_info, f_json, ensure_ascii=False, indent=4)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Audio-Visual Dataset Exploration and Processing Tools")
     
     # Mode selection
     parser.add_argument("--mode", type=str, required=True,
-                       choices=['build-subset', 'analyze', 'merge', 'clean'],
                        help="Operation mode: build-subset, analyze, merge, or clean")
     
     # Common arguments
@@ -508,3 +546,6 @@ if __name__ == "__main__":
         if args.dry_run:
             print("Running in DRY-RUN mode (preview only)")
         clean_non_mp4_files(args.data_dir, not args.no_backup, args.dry_run)
+    elif args.mode == 'build-json':
+        print(f"Converting text files in {args.data_dir} to JSON format...")
+        txt_to_json(args.data_dir, args.output_dir)

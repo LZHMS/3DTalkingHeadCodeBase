@@ -1,3 +1,28 @@
+"""
+Video Clip Downloader Module
+
+This module downloads video/audio clips from online platforms (primarily YouTube) using yt-dlp.
+It supports batch downloading, segment-based downloads, concurrent processing, and automatic
+cleanup of failed downloads.
+
+Main Features:
+    1. JSON-based batch clip downloading
+    2. URL availability checking and caching
+    3. Multi-process concurrent downloads
+    4. Automatic file organization and logging
+    5. Failed download tracking and cleanup
+
+Dependencies:
+    - yt-dlp: Video downloading
+    - rich: Progress bar display
+    - subprocess: External command execution
+
+Usage:
+    python download_clips.py --input clips.json --output ./output --workers 4
+
+Modified from https://github.com/FreedomIntelligence/TalkVid/blob/main/data_pipeline/0_video_download/download_clips.py
+"""
+
 import argparse
 import os
 import subprocess
@@ -17,24 +42,77 @@ from rich.progress import (
 )  # type: ignore
 
 
-from .utils import clip_success_downloaded, get_video_id, load_unavailable_urls, \
+from utils import clip_success_downloaded, get_video_id, load_unavailable_urls, \
 check_url_availability, get_yt_dlp_base_cmd, seconds_to_time_string, _match_segment_from_name
 
 
 class YTDLPDownloader:
+    """
+    YouTube Downloader using yt-dlp.
+    
+    This class manages the entire download workflow including task preparation,
+    URL validation, concurrent downloading, result handling, and file cleanup.
+    
+    Attributes:
+        args (argparse.Namespace): Command line arguments
+        full_download (bool): Whether to download full videos
+        logs_dir (str): Directory for download logs
+        json_dir (str): Directory for successful download JSON logs
+        failed_urls_file (str): File tracking failed URLs
+        failed_segments_file (str): File tracking failed segments
+        url2cate (Dict[str, str]): Mapping from URL to category
+        url2segments (Dict[str, List[Tuple[float, float]]]): Mapping from URL to segments
+        unavailable_urls (set): Set of known unavailable URLs
+    """
+    
     def __init__(self, args):
+        """
+        Initialize the YTDLPDownloader.
+        
+        Args:
+            args (argparse.Namespace): Command line arguments containing:
+                - output_dir: Output directory path
+                - full_download: Whether to download full videos
+                - cookies_path: Path to cookies file
+                - browser: Browser name for cookie extraction
+                - extractor_args: Additional yt-dlp extractor arguments
+        """
         self.args = args
         self.full_download = args.full_download
 
-        # logging
+        # Initialize logging directories
         self.logs_dir = os.path.join(args.output_dir, "download_logs")
-        self.json_dir = os.path.join(args.logs_dir, "success_logs")
+        self.json_dir = os.path.join(self.logs_dir, "success_logs")
         os.makedirs(self.json_dir, exist_ok=True)
 
         self.failed_urls_file = os.path.join(self.logs_dir, "failed_urls.txt")
         self.failed_segments_file = os.path.join(self.logs_dir, "failed_segments.txt")
 
     def parsing_json(self, input_json_path: str):
+        """
+        Parse input JSON file to extract download tasks.
+        
+        Reads a JSON file containing video clip information and yields download tasks.
+        Each task includes URL, start time, end time, and category.
+        
+        Args:
+            input_json_path (str): Path to input JSON file
+        
+        Yields:
+            Tuple[str, float, float, str]: Download task tuple containing:
+                - url: Video URL
+                - start_val: Start time (seconds) or -2 for full download
+                - end_val: End time (seconds) or -1 for full download
+                - category: Video category
+        
+        Raises:
+            ValueError: If JSON parsing fails or data format is invalid
+            AssertionError: If end-time is not greater than start-time
+        
+        Examples:
+            >>> for url, start, end, cat in downloader.parsing_json("clips.json"):
+            ...     print(f"Download {url} from {start}s to {end}s")
+        """
         with open(input_json_path, "r", encoding="utf-8") as f:
             try:
                 items = json.load(f)
@@ -53,15 +131,37 @@ class YTDLPDownloader:
             yield (url, start_val, end_val, category)
 
     def prepare_download_task(self):
+        """
+        Prepare download tasks by parsing JSON and filtering completed downloads.
+        
+        This method:
+        1. Parses the input JSON file
+        2. Checks for already downloaded clips
+        3. Groups segments by URL
+        4. Loads unavailable URLs from previous runs
+        5. Initializes progress bars
+        
+        Side Effects:
+            - Populates self.url2cate and self.url2segments
+            - Loads self.unavailable_urls
+            - Initializes self.progress with two tasks
+            - Prints statistics to console
+        
+        Notes:
+            - Skips segments that have already been successfully downloaded
+            - Respects the --limit argument if specified
+        """
         segments_to_download, total_segments, skipped_success_segments = 0, 0, 0
         self.url2cate = defaultdict(str)
         self.url2segments: Dict[str, List[Tuple[float, float]]] = defaultdict(list)
 
+        # Parse JSON and prepare download tasks
         for (url, start, end, category) in self.parsing_json(args.input_json_path):
             if args.limit is not None and args.limit >= 0 and segments_to_download >= args.limit:
                 break
             
             self.url2cate[url], total_segments = category, total_segments + 1
+            # Skip already downloaded clips
             if clip_success_downloaded(url, start, end, self.json_dir):
                 skipped_success_segments += 1
                 continue
@@ -69,6 +169,7 @@ class YTDLPDownloader:
             self.url2segments[url].append((start, end))
             segments_to_download += 1
                 
+        # Print task statistics
         print(f"Total segments found: {total_segments}")
         print(f"Skipped (already downloaded): {skipped_success_segments}")
         print(f"Segments to download: {segments_to_download}")
@@ -76,11 +177,12 @@ class YTDLPDownloader:
         if segments_to_download == 0:
             return
 
+        # Load previously failed URLs to avoid re-probing
         self.unavailable_urls = load_unavailable_urls(self.failed_urls_file)
         if self.unavailable_urls:
             print(f"Loaded {len(self.unavailable_urls)} permanently unavailable URLs from logs.")
 
-        # initialize progress bar
+        # Initialize progress bars for URLs and segments
         self.progress = Progress(
             TextColumn("{task.description}"),
             BarColumn(),
@@ -89,28 +191,49 @@ class YTDLPDownloader:
             TimeRemainingColumn(),
         )
 
-        self.progress.__enter__()  # 手动进入，使其可跨多个 with 范围外使用
+        self.progress.__enter__()  # Manually enter context for cross-scope usage
         self.task_urls = self.progress.add_task("URLs", total=len(self.url2segments))
         self.task_segments = self.progress.add_task("Segments", total=segments_to_download)
         
 
     def run_processing(self):
+        """
+        Execute download tasks using multi-process pool.
+        
+        This method:
+        1. Creates a process pool executor
+        2. Checks URL availability before downloading
+        3. Submits download tasks to the executor
+        4. Tracks futures for result handling
+        
+        Side Effects:
+            - Populates self.futures_map with submitted tasks
+            - Updates progress bars
+            - Writes to failed_urls_file and failed_segments_file for unavailable URLs
+        
+        Notes:
+            - Skips URLs that are in the unavailable_urls cache
+            - Uses check_url_availability to validate URLs before downloading
+            - Number of workers controlled by args.workers
+        """
         with ProcessPoolExecutor(max_workers=max(1, self.args.workers)) as executor:
             self.futures_map = {}
             for url, segs in self.url2segments.items():
-                # 新增：跳过已知的不可用 URL，避免重复探测
+                # Skip previously marked unavailable URLs
                 if url in self.unavailable_urls:
                     reason = "Skipping probe: URL previously marked as permanently unavailable."
                     with open(self.failed_segments_file, "a", encoding="utf-8") as fseg:
                         for (s, e) in segs:
                             fseg.write(f"SKIP\t{url}\t{s:.3f}\t{e:.3f}\t{reason}\n")
-                    # 进度条同样推进
+                    # Update progress bars
                     self.progress.update(self.task_urls, advance=1)
                     self.progress.update(self.task_segments, advance=len(segs))
                     continue
                 
-                available, reason = check_url_availability(url, self.args.cookies_path, self.args.browser, self.args.extractor_args)
+                # Check URL availability before downloading
+                available, reason = check_url_availability(url, self.args.cookies, self.args.browser, self.args.extractor_args)
                 if not available:
+                    # Log failed URL and segments
                     with open(self.failed_urls_file, "a", encoding="utf-8") as furl:
                         furl.write(f"{url}\t{reason}\n")
                     for (s, e) in segs:
@@ -119,13 +242,37 @@ class YTDLPDownloader:
                     self.progress.update(self.task_urls, advance=1)
                     self.progress.update(self.task_segments, advance=len(segs))
                 else:
+                    # Remove duplicates and sort segments
                     segs = sorted(set(segs))
 
+                # Submit download task
                 future = executor.submit(self.run_yt_dlp_download_segments, url, segs)
                 self.futures_map[future] = (url, segs)
     
     def handle_results(self):
-        # handle multi-process results
+        """
+        Handle download results from multi-process executor.
+        
+        This method:
+        1. Collects results from completed futures
+        2. Parses yt-dlp output to locate downloaded files
+        3. Saves successful download metadata to JSON logs
+        4. Records failed segments to failed_segments_file
+        5. Updates progress bars
+        6. Closes progress bar display
+        
+        Side Effects:
+            - Creates JSON log files in self.json_logs_dir
+            - Appends to failed_segments_file for failures
+            - Updates and closes progress bars
+            - Prints error messages to console
+        
+        Notes:
+            - Each successful segment gets its own JSON log file
+            - JSON logs include source info, download info, and timestamp
+            - Segments without output files are marked as failed
+        """
+        # Process completed download tasks
         for future in as_completed(self.futures_map):
             url0, segs0 = self.futures_map[future]
             self.progress.update(self.task_urls, advance=1)
@@ -138,13 +285,16 @@ class YTDLPDownloader:
                 rc, msg = 1, f"Task failed with exception: {exc}"
             
             if rc != 0:
+                # Log download failure
                 print(f"[yt-dlp] Failed: {url0} | {msg}")
                 with open(self.failed_segments_file, "a", encoding="utf-8") as fseg:
                     for (s, e) in segs0:
                         fseg.write(f"FAIL\t{url0}\t{s:.3f}\t{e:.3f}\t{msg}\n")
             else:
+                # Parse successful download output
                 parsed_results = self.parse_ytdlp_output(msg, segs0, video_id)
 
+                # Save metadata for each successful segment
                 for seg_tuple, files_info in parsed_results.items():
                     start, end = seg_tuple
                     log_filename = f"{video_id}_full.json".replace(":", "-") if self.full_download \
@@ -165,7 +315,7 @@ class YTDLPDownloader:
                     with open(log_file, "w", encoding="utf-8") as f:
                         json.dump(log_data, f, ensure_ascii=False, indent=2)
 
-                # 检查哪些分段没有成功产物
+                # Track segments that didn't produce output files
                 succeeded_segs = set(parsed_results.keys())
                 failed_segs = [s for s in segs0 if s not in succeeded_segs]
                 if failed_segs:
@@ -174,21 +324,46 @@ class YTDLPDownloader:
                             fseg.write(f"FAIL\t{url0}\t{s:.3f}\t{e:.3f}\tNo output file generated\n")
 
 
-        # 关闭进度条
+        # Close progress bar display
         self.progress.__exit__(None, None, None)
 
     def parse_ytdlp_output(self, output: str, segments: List[Tuple[float, float]],
         video_id: str) -> Dict[Tuple[float, float], Dict]:
         """
-        解析 yt-dlp 的输出，将文件路径与原始分段关联。
-        现在不仅解析 stdout，还会回退到扫描输出目录，以确保拿到完整的
-        audio / description / subtitle 信息。
-        支持完整视频下载（segments 为空列表时）。
+        Parse yt-dlp output to map downloaded files to segments.
+        
+        This method parses both stdout and scans the output directory to ensure
+        complete file information (video, audio, description, subtitles) is captured.
+        Supports both full video downloads and segment-based downloads.
+        
+        Args:
+            output (str): yt-dlp stdout containing file paths
+            segments (List[Tuple[float, float]]): List of requested time segments
+            video_id (str): Video identifier for directory lookup
+        
+        Returns:
+            Dict[Tuple[float, float], Dict]: Mapping of segments to file information.
+                Each value dict contains:
+                    - video_clip_file: Path to video file
+                    - audio_clip_file: Path to audio file
+                    - description_file: Path to description file
+                    - subtitle_files: List of subtitle file paths
+        
+        Notes:
+            - For full downloads, uses (-2.0, -1.0) as the segment key
+            - Matches files to segments using filename pattern matching
+            - Scans output directory as fallback if stdout parsing is incomplete
+            - Handles various video/audio formats (.mp4, .m4a, .webm, .mkv)
+            - Handles various subtitle formats (.vtt, .srt, .ass)
+        
+        Examples:
+            >>> results = downloader.parse_ytdlp_output(stdout, [(0, 10), (10, 20)], "abc123")
+            >>> print(results[(0, 10)]['video_clip_file'])
+            '/path/to/abc123_001_0.000_10.000.mp4'
         """
-
         files_from_stdout = [line.strip() for line in output.splitlines() if line.strip()]
 
-        # 分类容器
+        # Categorize files from stdout
         description_file: str = ""
         subtitle_files: List[str] = []
         clip_files: Dict[Tuple[float, float], List[str]] = defaultdict(list)
@@ -206,9 +381,11 @@ class YTDLPDownloader:
                 if self.full_download:
                     clip_files[(-2.0, -1.0)].append(str(possible_path))
                 else:
+                    # Match file to closest requested segment
                     closest_seg = min(segments, key=lambda s: abs(s[0]-seg_match[0])+abs(s[1]-seg_match[1]))
                     clip_files[closest_seg].append(str(possible_path))
 
+        # Scan output directory for additional files (fallback)
         try:
             video_output_dir = os.path.join(self.output_dir, video_id)
             for file_name in os.listdir(video_output_dir):
@@ -230,7 +407,7 @@ class YTDLPDownloader:
         except FileNotFoundError:
             pass
 
-        # 组装最终结果
+        # Assemble final results for each segment
         results: Dict[Tuple[float, float], Dict] = {}
         for seg in segments:
             file_list = clip_files.get(seg, [])
@@ -248,17 +425,44 @@ class YTDLPDownloader:
 
     def run_yt_dlp_download_segments(self, url, segments) -> Tuple[int, str]:
         """
-        对同一 URL 的多个片段，合并为一次 yt-dlp 调用（多个 --download-sections）。
-        产物文件名使用 section 变量，避免覆盖。
-        如果 segments 为空列表，则下载完整视频。
+        Execute yt-dlp to download segments from a single URL.
+        
+        This method constructs and executes yt-dlp commands with multiple format trials.
+        It supports both full video downloads and segment-based downloads with precise cuts.
+        
+        Args:
+            url (str): Video URL to download from
+            segments (List[Tuple[float, float]]): List of time segments to download.
+                Empty list means full video download.
+        
+        Returns:
+            Tuple[int, str]: A tuple containing:
+                - return_code: 0 for success, 1 for failure
+                - message: stdout on success, error message on failure
+        
+        Notes:
+            - Uses multiple format trials with fallback options
+            - First trial: merge to mp4 format
+            - Second trial: remux to mp4 format (more lenient)
+            - Extracts separate audio track in m4a format
+            - Downloads subtitles and video description
+            - Creates output directory structure: output_dir/category/video_id/
+            - Filenames include segment info: {video_id}_{num}_{start}_{end}.{ext}
+            - For full downloads: {video_id}_full.{ext}
+        
+        Examples:
+            >>> rc, msg = downloader.run_yt_dlp_download_segments(url, [(0, 10), (10, 20)])
+            >>> if rc == 0:
+            ...     print(f"Success: {msg}")
         """
-        base_cmd, err_info = get_yt_dlp_base_cmd(self.args.cookies_path, self.args.browser)
+        base_cmd, err_info = get_yt_dlp_base_cmd(self.args.cookies, self.args.browser)
         assert base_cmd, "Unable to locate yt-dlp"
 
         video_id = get_video_id(url)
         video_output_dir = os.path.join(self.output_dir, self.url2cate[url], video_id)
         os.makedirs(video_output_dir, exist_ok=True)
 
+        # Construct segment download arguments
         section_args: List[str] = []
         if not self.full_download:
             for (start, end) in segments:
@@ -271,9 +475,10 @@ class YTDLPDownloader:
         else:
             output_template = os.path.join(video_output_dir, "%(id)s_full.%(ext)s", )
         
+        # Define format trials with fallback options
         format_trials = [
             {
-                # trial 0: 首选格式（更理想）
+                # Trial 0: Preferred format (ideal)
                 "format": "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
                 "extra_flags": [
                     "--merge-output-format", "mp4",
@@ -281,7 +486,7 @@ class YTDLPDownloader:
                 "continue_flag": ["--no-continue", "--no-overwrites"],
             },
             {
-                # trial 1: 回退格式（更宽松）
+                # Trial 1: Fallback format (more lenient)
                 "format": "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
                 "extra_flags": [
                     "--remux-video", "mp4",
@@ -295,8 +500,10 @@ class YTDLPDownloader:
                 s_str, e_str = seconds_to_time_string(start), seconds_to_time_string(end)
                 section_args.extend(["--download-sections", f"*{s_str}-{e_str}"])
 
+        # Try each format until success
         last_err = ""
         for trial in format_trials:
+            # Construct yt-dlp command
             cmd: List[str] = [
                 *base_cmd,
                 "-4", "--ignore-config", "--no-playlist",
@@ -304,7 +511,7 @@ class YTDLPDownloader:
                 "--concurrent-fragments", "8", "-N", "4",
                 "--no-warnings", "--restrict-filenames",
                 *trial["continue_flag"],
-                "--print", "after_move:filepath",  # 打印最终文件路径
+                "--print", "after_move:filepath",  # Print final file paths
                 "--write-subs", "--write-auto-subs", "--write-description",
                 "--extract-audio", "--audio-format", "m4a",
                 "--audio-quality", "0", "--keep-video",
@@ -322,6 +529,7 @@ class YTDLPDownloader:
             cmd.extend(section_args)
             cmd.append(url)
 
+            # Execute yt-dlp command
             try:
                 proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
             except Exception as exc:  # noqa: BLE001
@@ -330,6 +538,7 @@ class YTDLPDownloader:
             if proc.returncode == 0:
                 return 0, proc.stdout.strip()
 
+            # Check if we should try next format
             last_err = (proc.stderr.strip() or proc.stdout.strip())
             if "Requested format is not available" not in last_err:
                 break
@@ -337,10 +546,33 @@ class YTDLPDownloader:
         return 1, last_err or "yt-dlp failed with unknown error"
 
     def cleanup_final_files(self) -> None:
-        """根据所有 json_logs 清理未被记录的文件，保持输出目录整洁。"""
+        """
+        Clean up unrecorded files based on JSON logs.
+        
+        This method scans all JSON log files to identify which files were successfully
+        downloaded, then removes any files in the output directory that are not
+        referenced in the logs. This keeps the output directory clean and organized.
+        
+        Side Effects:
+            - Deletes files not recorded in JSON logs
+            - Prints progress messages to console
+        
+        Notes:
+            - Preserves all files mentioned in success logs
+            - Skips deletion of log files themselves
+            - Only processes files with "success" status in logs
+            - Handles video_clip_file, audio_clip_file, description_file, and subtitle_files
+        
+        Examples:
+            >>> downloader.cleanup_final_files()
+            Starting final file cleanup...
+            Found 150 files recorded in logs. Scanning for unrecorded files...
+            Deleted unrecorded file: /path/to/orphan_file.tmp
+            Cleanup complete. Deleted 5 unrecorded files.
+        """
         print("\nStarting final file cleanup...")
 
-        # 1. 收集所有记录在案的文件路径
+        # Collect all recorded file paths from JSON logs
         recorded_files = set()
         json_files = glob.glob(os.path.join(self.json_dir, "*.json"))
         for log_file in json_files:
@@ -352,6 +584,7 @@ class YTDLPDownloader:
                 if info.get("status") != "success":
                     continue
 
+                # Collect all file references
                 for key, value in info.items():
                     if key.endswith("_file") and isinstance(value, str) and value:
                         recorded_files.add(os.path.abspath(value))
@@ -366,12 +599,12 @@ class YTDLPDownloader:
             print("No recorded files found in logs, skipping cleanup.")
             return
 
-        # 2. 遍历输出目录，删除未记录的文件
+        # Scan output directory and delete unrecorded files
         print(f"Found {len(recorded_files)} files recorded in logs. Scanning for unrecorded files...")
         deleted_count = 0
         for root, _, files in os.walk(args.output_dir):
             for file in files:
-                # 跳过原始失败日志
+                # Skip log files
                 if "logs" in root and ("failed_urls.txt" in file or "failed_segments.txt" in file):
                     continue
 
@@ -387,9 +620,10 @@ class YTDLPDownloader:
 
 
 if __name__ == "__main__":
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description="Download clips specified in a large JSON file directly with yt-dlp sections on Windows.")
-    parser.add_argument("--input", type=str, default=os.path.join(os.getcwd(), "filtered_video_clips.json"), help="Path to the large JSON file containing 'Video Link', 'start-time', 'end-time' fields.")
-    parser.add_argument("--output", type=str, default=os.path.join(os.getcwd(), "clips_output"), help="Directory to store the downloaded clips.")
+    parser.add_argument("--input_json_path", type=str, default=os.path.join(os.getcwd(), "filtered_video_clips.json"), help="Path to the large JSON file containing 'Video Link', 'start-time', 'end-time' fields.")
+    parser.add_argument("--output_dir", type=str, default=os.path.join(os.getcwd(), "clips_output"), help="Directory to store the downloaded clips.")
     parser.add_argument("--mode", choices=["ytdlp"], default="ytdlp", help="仅支持 'ytdlp'，已移除 video2dataset 支持。")
     parser.add_argument("--limit", type=int, default=None, help="Process at most this many clip segments (for testing).")
     parser.add_argument("--workers", type=int, default=4, help="Concurrent workers for yt-dlp mode.")
@@ -398,6 +632,7 @@ if __name__ == "__main__":
     parser.add_argument("--strict_cuts", type=bool, default=True, help="")
     parser.add_argument("--extractor_args", type=str, default=None, help="Pass through to yt-dlp --extractor-args, e.g. 'youtube:player_client=android'")
     parser.add_argument("--cleanup", action="store_true", help="Run cleanup process after downloading to remove unlogged files.")
+    parser.add_argument("--full_download", action="store_true", help="Download full videos instead of segments.")
 
     args = parser.parse_args()
     ytdlp_dl = YTDLPDownloader(args)

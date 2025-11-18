@@ -22,7 +22,7 @@ pretrained/
 # ignore the data
 HDTF_TFHP/
 VOCASET/
-TalkingScene/
+TalkScene/
 models/Avatar/data/
 
 node_modules/
@@ -31,3 +31,5 @@ node_modules/
 filtered_video_clips_with_captions.json
 filtered_video_clips.json
 mini_filtered_video_clips_with_captions.json
+
+data/data_pipline/audio_visual_dataset/output
