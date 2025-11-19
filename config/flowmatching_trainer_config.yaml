@@ -1,0 +1,100 @@
+ENV:
+  SEED: 2025
+  NAME: FlowMatching_Trainer
+  DESCRIPTION: Train the Flow Matching model for 3D Talking Head.
+  OUTPUT_DIR: ./output
+  VERBOSE: True
+
+DATASET:
+  NAME: HDTF_TFHP
+  ROOT: ./data/
+  HDTF_TFHP:
+    COEF_STATS: "stats_train.npz"
+    TRAIN: "train.txt"
+    VAL: "val.txt"
+    TEST: "test.txt"
+    COEF_FPS: 25      # frames per second for coefficients
+    MOTIONS: 100      # number of motions per sample
+    CROP: "random"    # crop strategy
+    AUDIO_SR: 16000   # audio sampling rate
+    N_PREV_MOTIONS: 10
+    PAD_MODE: 'zero'
+    USE_CONTEXT_AUDIO: True
+    TRUNC_PROB1: 0.3
+    TRUNC_PROB2: 0.4
+
+DATALOADER:
+  NUM_WORKERS: 4
+  TRAIN:
+    BATCH_SIZE: 32
+  TEST:
+    BATCH_SIZE: 64
+
+MODEL:
+  NAME: FlowMatchingHead
+  INIT_WEIGHTS: ''
+  HEAD:
+    ROT_REPR: 'aa'
+    NO_HEAD_POSE: False
+    AUDIO_MODEL: 'wav2vec2'
+    AUDIO_DIM: 128
+    STYLE_DIM: 128
+    USE_INDICATOR: True
+    ALIGN_MASK_WIDTH: 1
+    USE_LEARNABLE_PE: False
+  BACKBONE:
+    NAME: FlowMatching
+    HIDDEN_SIZE: 512
+    NUM_HIDDEN_LAYERS: 8
+    NUM_ATTENTION_HEADS: 8
+    # Flow Matching specific parameters
+    MIN_SIGMA: 0.0           # Minimum sigma for numerical stability
+    INFERENCE_MODE: 'euler'  # 'euler' or 'adaptive' for ODE solving
+    NUM_STEPS: 25            # Number of Euler steps for sampling
+    REVERSE_FLOW: True       # Use reverse flow (x1->x0)
+    LOG_NORMAL_MEAN: 0.0     # Log-normal sampling mean for time
+    LOG_NORMAL_STD: 1.0      # Log-normal sampling std for time
+  TAIL:
+    MLP_RATIO: 4
+  GUIDING_CONDITIONS: 'audio,style'
+  CFG_MODE: 'incremental'    # 'independent' or 'incremental'
+
+# Additional settings
+ADD:
+  STYLE_ENC_CKPT: ''  # Path to pre-trained style encoder checkpoint
+
+LOSS:
+  NAME: "L2Loss"
+  NO_CONSTRAIN_PREV: False
+  GEOMETRIC:
+    W_VERTEX: 0.0      # Geometric losses are optional for flow matching
+    W_VELOCITY: 0.0    # Can be enabled if needed
+    W_SMOOTH: 0.0
+  HEAD:
+    W_ANGLE: 0.0
+    W_VELOCITY: 0.0
+    W_SMOOTH: 0.0
+    W_TRANS: 0.0
+
+TRAINER:
+  NAME: FlowMatchingTrainer
+
+TRAIN:
+  USE_ITERS: True
+  MAX_ITERS: 200000
+  PRINT_FREQ: 50
+  SAVE_FREQ: 10000
+  EVALUATE: True
+  EVAL_FREQ: 5000
+
+OPTIM:
+  NAME: "adamw"
+  LR: 0.0001
+  WEIGHT_DECAY: 0.01      # AdamW weight decay
+  LR_SCHEDULER: "gradual"
+  WARMUP_MULTIPLIER: 1
+  LR_UPDATE_FREQ: 1
+
+TEST:
+  NO_TEST: False
+  EVALUATOR: CodeTalkerEvaluator
