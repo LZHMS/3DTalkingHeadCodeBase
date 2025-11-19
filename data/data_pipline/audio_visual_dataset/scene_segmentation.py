@@ -126,15 +126,16 @@ def collect_video_data_path(data_dir: str) -> List[Dict]:
                 if len(file.split('.')) == 3:
                     continue
 
-                if file.endswith(".mp4"):
+                if file.endswith(".mp4") and file.split('.')[0].endswith("_h264"):
                     video_path = os.path.join(root, file)
-                    video_id = os.path.splitext(file)[0]
+                    video_id = os.path.splitext(file)[0][:-5]  # Remove '_h264' suffix
                     video_cate = os.path.basename(root)
                     video_data.append({
                         "style-cate": category,
                         "video-cate": video_cate,
                         "video-id": video_id,
-                        "video-path": video_path
+                        "video-path": video_path,
+                        "audio-path": video_id + ".m4a"
                     })
     return video_data
 
@@ -246,7 +247,6 @@ def find_scenes_new(video_path, audio_path, output_subfolder,
     try:
         # Check if video is AV1 encoded
         codec = check_video_codec(video_path)
-        print(f"Video codec detected: {codec}")
         
         if codec == 'av1':
             print(f"AV1 codec detected, converting to H264...")
@@ -456,19 +456,15 @@ def process_video_clips(data, args):
     """
     for item in tqdm(data, desc="processing video clips"):
         try:
-            style_cate, video_cate, video_id, video_path = item['style-cate'], item['video-cate'], item['video-id'], item['video-path']
+            style_cate, video_cate, video_id, video_path, audio_path = item['style-cate'], item['video-cate'], \
+                                                                        item['video-id'], item['video-path'], item['audio-path']
             print(f"\nProcessing video_id: {video_id} in category: {video_cate}")
             print(f"Video path: {video_path}")
 
             if os.path.exists(video_path) and os.path.isfile(video_path):
                 # Create output subdirectory
-                output_subfolder = os.path.join(args.output, style_cate, video_cate, video_id)
+                output_subfolder = os.path.join(args.output, style_cate, video_id)
                 os.makedirs(output_subfolder, exist_ok=True)
-                
-                # Check if audio file exists
-                audio_path = video_path.replace('.mp4', '.m4a')
-                if not os.path.exists(audio_path):
-                    audio_path = video_path
                 
                 subtitle_path = None
                 # Perform scene detection and segmentation

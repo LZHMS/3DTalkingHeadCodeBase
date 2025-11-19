@@ -20,4 +20,4 @@ export https_proxy="http://127.0.0.1:7890"
 python scene_segmentation.py --data-dir output \
   --output output_clips \
   --num-workers 0 --max-threads 48 --threshold 7\
-  --clip-style video_only --use-fixed-duration False
+  --clip-style all --use-fixed-duration False
