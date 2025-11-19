@@ -20,6 +20,7 @@ import json
 import numpy as np
 from tqdm import tqdm
 from typing import List, Dict
+import tempfile
 
 import argparse
 import subprocess
@@ -122,6 +123,9 @@ def collect_video_data_path(data_dir: str) -> List[Dict]:
         
         for root, dirs, files in os.walk(category_path):
             for file in files:
+                if len(file.split('.')) == 3:
+                    continue
+
                 if file.endswith(".mp4"):
                     video_path = os.path.join(root, file)
                     video_id = os.path.splitext(file)[0]
@@ -133,6 +137,75 @@ def collect_video_data_path(data_dir: str) -> List[Dict]:
                         "video-path": video_path
                     })
     return video_data
+
+def check_video_codec(video_path):
+    """
+    Check video codec format.
+    
+    Args:
+        video_path (str): Video file path
+    
+    Returns:
+        str: Codec name (e.g., 'h264', 'av1'), or None if unable to detect
+    """
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=codec_name",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            codec = result.stdout.strip().lower()
+            return codec
+        return None
+    except Exception as e:
+        print(f"Warning: Unable to detect codec for {video_path}: {e}")
+        return None
+
+def convert_av1_to_h264(input_path, output_path=None):
+    """
+    Convert AV1 encoded video to H264 format for better compatibility.
+    
+    Args:
+        input_path (str): Input video path (AV1 format)
+        output_path (str): Output video path (H264 format), auto-generated if None
+    
+    Returns:
+        str: Converted video path, or None if conversion fails
+    """
+    if output_path is None:
+        # Create temporary file
+        temp_dir = os.path.dirname(input_path)
+        output_path = os.path.join(temp_dir, f"temp_h264_{os.path.basename(input_path)}")
+    
+    try:
+        print(f"Converting AV1 video to H264: {input_path}")
+        cmd = [
+            "ffmpeg", "-i", input_path,
+            "-c:v", "libx264",  # Use H264 encoder
+            "-preset", "fast",  # Fast encoding preset
+            "-crf", "23",  # Quality setting
+            "-c:a", "aac",  # Audio codec
+            "-v", "error",  # Only show errors
+            "-stats",  # Show progress
+            "-y",  # Overwrite output file
+            output_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0 and os.path.exists(output_path):
+            print(f"Successfully converted to H264: {output_path}")
+            return output_path
+        else:
+            print(f"AV1 conversion failed: {result.stderr}")
+            return None
+    except Exception as e:
+        print(f"Error during AV1 conversion: {e}")
+        return None
 
 def find_scenes_new(video_path, audio_path, output_subfolder,
                     subtitle_path, args):
@@ -166,147 +239,204 @@ def find_scenes_new(video_path, audio_path, output_subfolder,
     Raises:
         IOError: When unable to open video file
     """
-    # Get basic video information
-    video_cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG) 
-    if not video_cap.isOpened():
-        print(f"Error: Could not open video file {video_path}")
-        return
-
-    width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = video_cap.get(cv2.CAP_PROP_FPS)
-    video_cap.release()
-
-    # Use scenedetect for scene detection
-    video = open_video(video_path)
-    stats_manager = StatsManager()
-    scene_manager = SceneManager(stats_manager)
-
-    # Select detector based on parameters
-    if args.detector_type == "Adaptive":
-        scene_manager.add_detector(AdaptiveDetector(adaptive_threshold=float(args.detector_threshold))) 
-
-    elif args.detector_type == "Histogram":
-        scene_manager.add_detector(HistogramDetector(threshold = float(args.detector_threshold)))
+    # Check video codec and convert if necessary
+    temp_video_path = None
+    original_video_path = video_path  # Save original path
     
-    elif args.detector_type == "Content":
-        scene_manager.add_detector(ContentDetector(threshold = float(args.detector_threshold)))
-    
-    elif args.detector_type == "Hash":
-        scene_manager.add_detector(HashDetector(threshold = float(args.detector_threshold)))
-    
-    elif args.detector_type == "Threshold":
-        scene_manager.add_detector(ThresholdDetector(threshold = float(args.detector_threshold)))
+    try:
+        # Check if video is AV1 encoded
+        codec = check_video_codec(video_path)
+        print(f"Video codec detected: {codec}")
+        
+        if codec == 'av1':
+            print(f"AV1 codec detected, converting to H264...")
+            temp_video_path = convert_av1_to_h264(video_path)
+            if temp_video_path:
+                video_path = temp_video_path
+                print(f"Using converted video: {video_path}")
+            else:
+                print(f"Error: AV1 conversion failed, skipping this video")
+                return []
+        
+        # Try to open video with OpenCV
+        video_cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+        
+        if not video_cap.isOpened():
+            print(f"Error: Could not open video file {video_path}")
+            # If not already converted, try AV1 conversion as fallback
+            if temp_video_path is None:
+                print(f"Attempting AV1 conversion as fallback...")
+                temp_video_path = convert_av1_to_h264(video_path)
+                if temp_video_path:
+                    video_path = temp_video_path
+                    video_cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+                    if not video_cap.isOpened():
+                        print(f"Error: Still cannot open video after conversion")
+                        return []
+                else:
+                    print(f"Error: Video conversion failed")
+                    return []
+            else:
+                return []
 
-    # Execute scene detection
-    scene_manager.detect_scenes(video=video)
-    scene_list = scene_manager.get_scene_list()
+        width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = video_cap.get(cv2.CAP_PROP_FPS)
+        video_cap.release()
 
-    scenes_data, scene_counter = [], 1  # Initialize scene data list and counter
-    save_path_scenes_info = os.path.join(output_subfolder, f"video_scece_info.txt")
+        # Use scenedetect for scene detection
+        video = open_video(video_path)
+        stats_manager = StatsManager()
+        scene_manager = SceneManager(stats_manager)
 
-    # Process each detected scene
-    for i, scene in enumerate(scene_list):
-        start_time = scene[0].get_seconds() + 0.4 
-        end_time = scene[1].get_seconds()
-        duration = end_time - start_time
+        # Select detector based on parameters
+        if args.detector_type == "Adaptive":
+            scene_manager.add_detector(AdaptiveDetector(adaptive_threshold=float(args.detector_threshold))) 
 
-        # If fixed duration mode is enabled, adjust time range based on scene length
-        if args.use_fixed_duration:
-            # Adjust to fixed duration based on different duration intervals
-            if 5.0 <= duration < 10.0:
-                middle = (start_time + end_time) / 2
-                start_time = middle - 2.5
-                end_time = middle + 2.5
+        elif args.detector_type == "Histogram":
+            scene_manager.add_detector(HistogramDetector(threshold = float(args.detector_threshold)))
+        
+        elif args.detector_type == "Content":
+            scene_manager.add_detector(ContentDetector(threshold = float(args.detector_threshold)))
+        
+        elif args.detector_type == "Hash":
+            scene_manager.add_detector(HashDetector(threshold = float(args.detector_threshold)))
+        
+        elif args.detector_type == "Threshold":
+            scene_manager.add_detector(ThresholdDetector(threshold = float(args.detector_threshold)))
+
+        # Execute scene detection
+        scene_manager.detect_scenes(video=video)
+        scene_list = scene_manager.get_scene_list()
+
+        scenes_data, scene_counter = [], 1
+        save_path_scenes_info = os.path.join(output_subfolder, f"video_scece_info.txt")
+
+        # Process each detected scene
+        for i, scene in enumerate(scene_list):
+            start_time = scene[0].get_seconds() + 0.4 
+            end_time = scene[1].get_seconds()
+            duration = end_time - start_time
+
+            # If fixed duration mode is enabled, adjust time range based on scene length
+            if args.use_fixed_duration:
+                # Adjust to fixed duration based on different duration intervals
+                if 5.0 <= duration < 10.0:
+                    middle = (start_time + end_time) / 2
+                    start_time = middle - 2.5
+                    end_time = middle + 2.5
+                
+                elif 10.0 <= duration < 15.0:
+                    middle = (start_time + end_time) / 2
+                    start_time = middle - 5.0
+                    end_time = middle + 5.0
+                    
+                elif 15.0 <= duration < 20.0:
+                    middle = (start_time + end_time) / 2
+                    start_time = middle - 7.5
+                    end_time = middle + 7.5
+                elif 20.0 <= duration < 25.0:
+                    middle = (start_time + end_time) / 2
+                    start_time = middle - 10.0
+                    end_time = middle + 10.0
+                    
+                elif duration >= 25.0:
+                    middle = (start_time + end_time) / 2
+                    start_time = middle - 12.5
+                    end_time = middle + 12.5
+            else:
+                # Fine-tune start and end times
+                start_time = max(0, start_time - 0.1)
+                end_time = max(0, end_time - 0.1)   
+
+            # Define output file paths
+            output_video_filename = os.path.join(output_subfolder, f"scene_{scene_counter}.mp4")
+            output_audio_filename = os.path.join(output_subfolder, f"scene_{scene_counter}.m4a")
+
+            # Record scene information for debugging
+            start_minutes, start_seconds = divmod(start_time, 60)
+            end_minutes, end_seconds = divmod(end_time, 60)
+
+            with open(save_path_scenes_info, "a") as file: 
+                file.write(f"scene {scene_counter} infos: start_time {int(start_minutes)}:{int(start_seconds)}, end_time {int(end_minutes)}:{int(end_seconds)}\n")
+
+            # Determine export content based on clip_style parameter
+            if args.clip_style == "none":
+                continue
+            elif args.clip_style == "all":
+                try:
+                    subprocess.run([
+                        "ffmpeg", "-ss", str(start_time), "-i", video_path, "-t", str(end_time - start_time),
+                        "-c:v", "libx264", "-preset", "medium", "-an", 
+                        "-v", "error", "-stats",  # Reduce output verbosity
+                        output_video_filename, "-y"
+                    ], check=True, capture_output=True)
+
+                    subprocess.run([ 
+                        "ffmpeg", "-ss", str(start_time), "-i", audio_path, "-t", str(end_time - start_time),
+                        "-c:a", "aac", "-v", "error", "-stats",
+                        output_audio_filename, "-y"
+                    ], check=True, capture_output=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Warning: Failed to export scene {scene_counter}: {e.stderr.decode() if e.stderr else str(e)}")
+                    continue
+                    
+            elif args.clip_style == "video_only":
+                try:
+                    subprocess.run([
+                        "ffmpeg", "-ss", str(start_time), "-i", video_path, "-t", str(end_time - start_time),
+                        "-c:v", "libx264", "-preset", "medium", "-an",
+                        "-v", "error", "-stats",
+                        output_video_filename, "-y"
+                    ], check=True, capture_output=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Warning: Failed to export video scene {scene_counter}: {e.stderr.decode() if e.stderr else str(e)}")
+                    continue
+                    
+            elif args.clip_style == "audio_only":
+                try:
+                    subprocess.run([ 
+                        "ffmpeg", "-ss", str(start_time), "-i", audio_path, "-t", str(end_time - start_time),
+                        "-c:a", "aac", "-v", "error", "-stats",
+                        output_audio_filename, "-y"
+                    ], check=True, capture_output=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Warning: Failed to export audio scene {scene_counter}: {e.stderr.decode() if e.stderr else str(e)}")
+                    continue
+            else:
+                print(f"Unknown clip_style: {args.clip_style}. Skipping clip extraction.")
+                continue
+
+            # Save scene metadata (use original video path in metadata)
+            scenes_data.append({
+                "id": f"scene_{scene_counter}",
+                "video-path": output_video_filename,
+                "audio-path": output_audio_filename,
+                "height": height,
+                "width": width,
+                "fps": fps,
+                "start-time": start_time,
+                "start-frame": scene[0].get_frames(),
+                "end-time": end_time,
+                "end-frame": scene[1].get_frames(),
+                "durations": f"{round(end_time - start_time, 1)}s",
+                "original-video": original_video_path,
+                "original-audio": audio_path,
+                "subtitle_path": subtitle_path,
+            })
             
-            elif 10.0 <= duration < 15.0:
-                middle = (start_time + end_time) / 2
-                start_time = middle - 5.0
-                end_time = middle + 5.0
-                
-            elif 15.0 <= duration < 20.0:
-                middle = (start_time + end_time) / 2
-                start_time = middle - 7.5
-                end_time = middle + 7.5
-            elif 20.0 <= duration < 25.0:
-                middle = (start_time + end_time) / 2
-                start_time = middle - 10.0
-                end_time = middle + 10.0
-                
-            elif duration >= 25.0:
-                middle = (start_time + end_time) / 2
-                start_time = middle - 12.5
-                end_time = middle + 12.5
-        else:
-            # Fine-tune start and end times
-            start_time = max(0, start_time - 0.1)
-            end_time = max(0, end_time - 0.1)   
+            scene_counter += 1
 
-        # Define output file paths
-        output_video_filename = os.path.join(output_subfolder, f"scene_{scene_counter}.mp4")
-        output_audio_filename = os.path.join(output_subfolder, f"scene_{scene_counter}.m4a")
-
-        # Record scene information for debugging
-        start_minutes, start_seconds = divmod(start_time, 60)
-        end_minutes, end_seconds = divmod(end_time, 60)
-
-        with open(save_path_scenes_info, "a") as file: 
-            file.write(f"scene {scene_counter} infos: start_time {int(start_minutes)}:{int(start_seconds)}, end_time {int(end_minutes)}:{int(end_seconds)}\n")
-
-        # Determine export content based on clip_style parameter
-        if args.clip_style == "none":
-            # Skip video and audio export
-            continue
-        elif args.clip_style == "all":
-            # Export both video and audio clips
-            subprocess.run([
-                "ffmpeg", "-ss", str(start_time), "-i", video_path, "-t", str(end_time - start_time),
-                "-c:v", "libx264", "-preset", "medium", "-an", output_video_filename
-            ])
-
-            subprocess.run([ 
-                "ffmpeg", "-ss", str(start_time), "-i", audio_path, "-t", str(end_time - start_time),
-                "-c:a", "aac", output_audio_filename
-            ])
-        elif args.clip_style == "video_only":
-            # Export video clip only
-            subprocess.run([
-                "ffmpeg", "-ss", str(start_time), "-i", video_path, "-t", str(end_time - start_time),
-                "-c:v", "libx264", "-preset", "medium", "-an", output_video_filename
-            ])
-        elif args.clip_style == "audio_only":
-            # Export audio clip only
-            subprocess.run([ 
-                "ffmpeg", "-ss", str(start_time), "-i", audio_path, "-t", str(end_time - start_time),
-                "-c:a", "aac", output_audio_filename
-            ])
-        else:
-            print(f"Unknown clip_style: {args.clip_style}. Skipping clip extraction.")
-            continue
-
-        # Save scene metadata
-        scenes_data.append({
-            "id": f"scene_{scene_counter}",
-            "video-path": output_video_filename,
-            "audio-path": output_audio_filename,
-            "height": height,
-            "width": width,
-            "fps": fps,
-            "start-time": start_time,
-            "start-frame": scene[0].get_frames(),
-
-            "end-time": end_time,
-            "end-frame": scene[1].get_frames(),
-            "durations": f"{round(end_time - start_time, 1)}s",
-            "original-video": str(audio_path).replace(".m4a", ".mp4"),
-            "original-audio": audio_path,
-            "subtitle_path": subtitle_path,
-        
-        })
-        
-        scene_counter += 1  # Increment scene counter
-
-    return scenes_data
+        return scenes_data
+    
+    finally:
+        # Clean up temporary converted file
+        if temp_video_path and os.path.exists(temp_video_path):
+            try:
+                os.remove(temp_video_path)
+                print(f"Cleaned up temporary file: {temp_video_path}")
+            except Exception as e:
+                print(f"Warning: Failed to clean up temporary file {temp_video_path}: {e}")
 
 def process_video_clips(data, args):
     """

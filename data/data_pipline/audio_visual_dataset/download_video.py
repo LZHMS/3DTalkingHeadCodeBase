@@ -382,8 +382,8 @@ def run_yt_dlp_full_video(
         "--restrict-filenames",
         "--no-continue", "--no-overwrites",
         "--print", "after_move:filepath",
-        "--write-subs",
-        "--write-auto-subs",
+        # "--write-subs",
+        # "--write-auto-subs",
         "--write-description",
         "--extract-audio",
         "--audio-format", "m4a", "--audio-quality", "0",
@@ -415,7 +415,8 @@ def run_yt_dlp_full_video(
                 "--no-warnings", "--restrict-filenames",
                 "-c", "--no-overwrites",
                 "--print", "after_move:filepath",
-                "--write-subs", "--write-auto-subs", "--write-description",
+                #"--write-subs", "--write-auto-subs", 
+                "--write-description",
                 "--extract-audio", "--audio-format", "m4a", "--keep-video",
                 "-o", output_template,
                 "-f", "bestvideo[ext=mp4][vcodec!=none]+bestaudio[ext=m4a]/best[ext=mp4][vcodec!=none]",
@@ -457,6 +458,7 @@ def probe_url_availability(
         cmd.extend(["--extractor-args", extractor_args])
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True)
+        print(f"[probe] cmd: {' '.join(cmd)}")
         if proc.returncode == 0 and proc.stdout.strip():
             return True, proc.stdout.strip()
         # Collect an error message
@@ -740,17 +742,18 @@ def download_with_ytdlp(
 
             # 探测可用性
             progress.update(task_id, completed=10, status="[yellow]Probing...")
-            ok, reason = probe_url_availability(url, cookies_path, browser, extractor_args)
-            if not ok:
-                with open(failed_urls_file, "a", encoding="utf-8") as furl:
-                    furl.write(f"{url}\t{reason}\n")
-                progress.update(
-                    task_id,
-                    completed=100,
-                    status="[red]Failed probe"
-                )
-                progress.update(task_overall, advance=1)
-                continue
+            # ok, reason = probe_url_availability(url, cookies_path, browser, extractor_args)
+            # progress.update(task_id, completed=15, status="[yellow]Probed!")
+            # if not ok:
+            #     with open(failed_urls_file, "a", encoding="utf-8") as furl:
+            #         furl.write(f"{url}\t{reason}\n")
+            #     progress.update(
+            #         task_id,
+            #         completed=100,
+            #         status="[red]Failed probe"
+            #     )
+            #     progress.update(task_overall, advance=1)
+            #     continue
 
             # 创建分类目录
             category_dir = os.path.join(output_dir, category)

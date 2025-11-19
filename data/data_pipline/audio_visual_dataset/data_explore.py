@@ -490,6 +490,161 @@ def txt_to_json(src, json_path: str) -> None:
         json.dump(json_info, f_json, ensure_ascii=False, indent=4)
 
 
+def move_files_to_folders(dir_path: str) -> None:
+    """
+    将 Speech 文件夹中的文件按文件名的第一部分分组，移动到对应的文件夹中。
+    例如，文件名为 "abc.def.mp4" 的文件将被移动到 "Speech/abc/" 文件夹中。
+    """
+
+    target = Path(dir_path)
+
+    # 检查文件夹是否存在
+    if not target.exists():
+        print(f"文件夹 {target} 不存在")
+    else:
+        # 获取所有文件
+        files = [f for f in target.iterdir() if f.is_file()]
+        
+        # 按文件名第一部分分组
+        file_groups = {}
+        for file in files:
+            # 获取文件名（不含扩展名）
+            filename = file.name
+            # 通过 . 分割并取第一个部分
+            prefix = filename.split('.')[0]
+            
+            if prefix not in file_groups:
+                file_groups[prefix] = []
+            file_groups[prefix].append(file)
+        
+        # 为每个分组创建文件夹并移动文件
+        for prefix, group_files in file_groups.items():
+            # 创建文件夹
+            target_dir = target / prefix
+            target_dir.mkdir(exist_ok=True)
+            print(f"\n创建文件夹: {target_dir}")
+            
+            # 移动文件
+            for file in group_files:
+                target_path = target_dir / file.name
+                shutil.move(str(file), str(target_path))
+                print(f"  移动: {file.name} -> {prefix}/")
+        
+        print("\n文件整理完成！")
+
+
+def convert_av1_to_h264(data_dir: str, dry_run: bool = True) -> Tuple[int, int]:
+    """
+    Convert AV1 encoded videos to H264 format in batch for better compatibility.
+    Only converts files matching pattern: {video_id}.mp4 (excludes {video_id}.f{format}.mp4)
+    
+    Args:
+        data_dir (str): Root directory containing video files (output/{category}/{video_name}/)
+        dry_run (bool): If True, only preview without actual conversion (default: True)
+    
+    Returns:
+        Tuple[int, int]: (converted_count, skipped_count)
+    
+    Directory Structure:
+        data_dir/
+        ├── category1/
+        │   └── video_name/
+        │       ├── _jcW-ZgpRbM.mp4          # Will convert
+        │       ├── _jcW-ZgpRbM.f398.mp4     # Will skip
+        │       └── _jcW-ZgpRbM_h264.mp4     # Output file
+        └── category2/
+    
+    Examples:
+        >>> converted, skipped = convert_av1_to_h264('./output', dry_run=False)
+    """
+    import re
+    
+    output_dir = Path(data_dir)
+    converted_count = 0
+    skipped_count = 0
+    
+    # Pattern: matches files like {video_id}.mp4, but NOT {video_id}.f{number}.mp4
+    # Examples: _jcW-ZgpRbM.mp4 (match), _jcW-ZgpRbM.f398.mp4 (no match)
+    pattern = re.compile(r'^[^.]+\.mp4$')
+    
+    # Traverse all category folders
+    for category_dir in sorted(output_dir.iterdir()):
+        # Skip non-directory and excluded folders
+        if not category_dir.is_dir() or category_dir.name in ['logs', 'json_logs']:
+            continue
+        
+        print(f"\nProcessing category: {category_dir.name}")
+        
+        # Traverse each video folder
+        for video_dir in category_dir.iterdir():
+            if not video_dir.is_dir():
+                continue
+            
+            # Find all mp4 files matching the pattern
+            for video_file in video_dir.glob("*.mp4"):
+                # Skip already converted H264 files
+                if '_h264' in video_file.stem or '_merged' in video_file.stem:
+                    continue
+                
+                # Check if filename matches pattern (e.g., _jcW-ZgpRbM.mp4)
+                if not pattern.match(video_file.name):
+                    print(f"  Skip (format file): {video_file.name}")
+                    skipped_count += 1
+                    continue
+                
+                # Build output filename
+                output_file = video_file.with_name(f"{video_file.stem}_h264.mp4")
+                
+                # Skip if converted file already exists
+                if output_file.exists():
+                    print(f"  Exists: {output_file.name}")
+                    skipped_count += 1
+                    continue
+                
+                if dry_run:
+                    print(f"  [Preview] Will convert: {video_file.name} -> {output_file.name}")
+                    converted_count += 1
+                    continue
+                
+                # Convert AV1 to H264
+                try:
+                    print(f"  Converting: {video_file.name}")
+                    cmd = [
+                        'ffmpeg',
+                        '-i', str(video_file),
+                        '-c:v', 'libx264',  # Use H264 encoder
+                        '-preset', 'fast',   # Fast encoding preset
+                        '-crf', '23',        # Quality setting
+                        '-c:a', 'aac',       # Audio codec
+                        '-v', 'error',       # Only show errors
+                        '-stats',            # Show progress
+                        '-y',                # Overwrite output file
+                        str(output_file)
+                    ]
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    
+                    if result.returncode == 0 and output_file.exists():
+                        print(f"  Successfully converted: {video_file.name} -> {output_file.name}")
+                        converted_count += 1
+                    else:
+                        print(f"  Conversion failed: {video_file.name} - {result.stderr}")
+                        skipped_count += 1
+                
+                except Exception as e:
+                    print(f"  Processing error {video_file.name}: {e}")
+                    skipped_count += 1
+    
+    print(f"\n=== Conversion {'Preview' if dry_run else 'Complete'} ===")
+    print(f"{'Will convert' if dry_run else 'Converted'}: {converted_count} files")
+    print(f"Skipped: {skipped_count} files")
+    
+    if dry_run:
+        print("\n⚠️ Preview mode - no files were actually converted")
+        print("To execute conversion, run with --no-dry-run")
+    
+    return converted_count, skipped_count
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Audio-Visual Dataset Exploration and Processing Tools")
     
@@ -549,3 +704,16 @@ if __name__ == "__main__":
     elif args.mode == 'build-json':
         print(f"Converting text files in {args.data_dir} to JSON format...")
         txt_to_json(args.data_dir, args.output_dir)
+    elif args.mode == 'move-files':
+        print(f"Moving files in {args.data_dir} to corresponding folders...")
+        move_files_to_folders(args.data_dir)
+    
+    elif args.mode == 'convert-av1':
+        print(f"Converting AV1 videos to H264 in {args.data_dir}...")
+        if args.dry_run:
+            print("Running in DRY-RUN mode (preview only)")
+        convert_av1_to_h264(args.data_dir, args.dry_run)
+    
+    else:
+        print(f"Unknown mode: {args.mode}")
+        print("Available modes: build-subset, analyze, merge, clean, build-json, move-files, convert-av1")
