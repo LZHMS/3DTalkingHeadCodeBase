@@ -113,7 +113,7 @@ class HDTF_TFHP(DatasetBase):
         super().__init__(train=data_dict['train'], val=data_dict['val'], test=data_dict['test'])
 
 
-class DiffPoseTalkDM(DataManager):
+class HDTF_TFHPDM(DataManager):
   
     def __init__(self,
                 cfg,
@@ -146,7 +146,7 @@ class StyledTalkWrapper(DatasetWrapper):
             
         return output
 
-class DiffTalkWrapper(DatasetWrapper):
+class HDTF_TFHPWrapper(DatasetWrapper):
 
     def __init__(self, cfg, data_source, is_train=False):
         super().__init__(cfg, data_source, is_train)

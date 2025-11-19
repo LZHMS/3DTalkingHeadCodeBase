@@ -6,7 +6,7 @@ import torch.nn as nn
 from collections import defaultdict
 
 from base import TrainerBase, TRAINER_REGISTRY, build_evaluator
-from datasets import DiffPoseTalkDM, StyledTalkWrapper, DiffTalkWrapper
+from datasets import HDTF_TFHPDM, StyledTalkWrapper, HDTF_TFHPWrapper
 from models import StyleEncoder, DiffTalkingHead, FLAME, FLAMEConfig
 from utils import AverageMeter, truncate_motion_coef_and_audio, get_coef_dict
 
@@ -31,7 +31,7 @@ class StyleEncoderTrainer(TrainerBase):
         A re-implementation of this method must create the
         same attributes (self.dm is optional).
         """
-        dm = DiffPoseTalkDM(self.assistant.cfg, StyledTalkWrapper, infinite_train=True)
+        dm = HDTF_TFHPDM(self.assistant.cfg, StyledTalkWrapper, infinite_train=True)
 
         self.train_loader = dm.train_loader
         self.val_loader = dm.val_loader  # optional, can be None
@@ -208,7 +208,7 @@ class DiffPoseTalkTrainer(TrainerBase):
         A re-implementation of this method must create the
         same attributes (self.dm is optional).
         """
-        dm = DiffPoseTalkDM(self.assistant.cfg, DiffTalkWrapper, infinite_train=True)
+        dm = HDTF_TFHPDM(self.assistant.cfg, HDTF_TFHPWrapper, infinite_train=True)
 
         self.train_loader = dm.train_loader
         self.val_loader = dm.val_loader  # optional, can be None

@@ -3,7 +3,6 @@ import argparse
 from base import build_trainer
 from config import CodeTalkerConfig, TrainerConfig
 from trainers import StyleEncoderTrainer
-from evaluation import CodeTalkerEvaluator
 import warnings
 warnings.filterwarnings('ignore')
 import wandb
