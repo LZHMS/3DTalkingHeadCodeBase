@@ -195,7 +195,7 @@ class FlowMatchingHead(nn.Module):
                 return flow_full
 
             motion_pre = self.flow_matching.to_data(ode_func, ode_init)
-
+        
         return predicted_v, target_v, motion_pre, motion_feat.detach(), audio_feat_saved.detach()
 
     def _log_normal_sample(self, batch_size, device):

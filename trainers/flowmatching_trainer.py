@@ -156,7 +156,7 @@ class FlowMatchingTrainer(TrainerBase):
 
         # Initialize loss dict
         loss_dict = {'flow': 0.0, 'vert': 0.0, 'vel': 0.0, 'smooth': 0.0,
-                     'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0, 'head_trans': 0.0}
+                     'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0}
         
         for clip_id in range(2):
             audio = audio_pair[clip_id]
@@ -215,10 +215,11 @@ class FlowMatchingTrainer(TrainerBase):
             loss_flow = self.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
             
             # Geometric losses
+            # Align motion_coef_gt and motion_pre to have the same sequence length
             motion_coef_gt = torch.cat([prev_motion_coef, motion_coef_in], dim=1) if clip_id != 0 else motion_coef_in
-            print(motion_coef_gt.shape)
             coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                 rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+            motion_pre = motion_pre[:, data_cfg.N_PREV_MOTIONS:] if clip_id == 0 else motion_pre
             coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                 rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
             
@@ -272,8 +273,8 @@ class FlowMatchingTrainer(TrainerBase):
                 mask = torch.ones((motion_pre.shape[0], data_cfg.MOTIONS), dtype=torch.bool, device=predicted_v.device)
             else:
                 mask = torch.arange(data_cfg.MOTIONS, device=motion_pre.device).expand(motion_pre.shape[0], -1) < end_idx.unsqueeze(1)
-
-            loss_dict['flow'] += (loss_flow[mask].mean() / 2)
+            mask = torch.cat([torch.ones_like(mask[:, :data_cfg.N_PREV_MOTIONS]), mask], dim=1) if clip_id != 0 else mask
+            loss_dict['flow'] += (loss_flow.mean() / 2)
             loss_dict['vert'] += (loss_vert[mask].mean() / 2) if loss_vert is not None else 0.0
             loss_dict['vel'] += (loss_vel[mask[:, 1:]].mean() / 2) if loss_vel is not None and torch.numel(loss_vel) > 0 else 0.0
             loss_dict['smooth'] += (loss_smooth[mask[:, 2:]].mean() / 2) if loss_smooth is not None and torch.numel(loss_smooth) > 0 else 0.0
@@ -295,8 +296,7 @@ class FlowMatchingTrainer(TrainerBase):
                 loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'] + \
                 loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'] + \
                 loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'] + \
-                loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'] + \
-                loss_cfg.HEAD.W_TRANS * loss_dict['head_trans']
+                loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth']
 
         loss_dict['total'] = loss
         loss_dict['vert'] = (loss_cfg.GEOMETRIC.W_VERTEX * loss_dict['vert'])
@@ -305,7 +305,6 @@ class FlowMatchingTrainer(TrainerBase):
         loss_dict['head_angle'] = (loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'])
         loss_dict['head_vel'] = (loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'])
         loss_dict['head_smooth'] = (loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
-        loss_dict['head_trans'] = (loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
         loss_dict['total'] = loss
         
         self.model_backward_and_update(loss)
@@ -345,7 +344,7 @@ class FlowMatchingTrainer(TrainerBase):
                     audio_feat = model.extract_audio_feature(torch.cat(audio_pair, dim=1), data_cfg.MOTIONS * 2)
 
                 loss_dict = {'flow': 0.0, 'vert': 0.0, 'vel': 0.0, 'smooth': 0.0,
-                     'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0, 'head_trans': 0.0}
+                     'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0}
                 for clip_id in range(2):
                     audio = audio_pair[clip_id]
                     motion_coef = motion_coef_pair[clip_id]
@@ -399,9 +398,12 @@ class FlowMatchingTrainer(TrainerBase):
                         )
 
                     loss_flow = self.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
+                    
+                    # Align motion_coef_gt and motion_pre to have the same sequence length
                     motion_coef_gt = torch.cat([prev_motion_coef, motion_coef_in], dim=1) if clip_id != 0 else motion_coef_in
                     coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                         rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+                    motion_pre = motion_pre[:, data_cfg.N_PREV_MOTIONS:] if clip_id == 0 else motion_pre
                     coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                         rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
                     
@@ -446,7 +448,8 @@ class FlowMatchingTrainer(TrainerBase):
                     else:
                         mask = torch.arange(data_cfg.MOTIONS, device=motion_pre.device).expand(motion_pre.shape[0], -1) < end_idx.unsqueeze(1)
 
-                    loss_dict['flow'] += (loss_flow[mask].mean() / 2)
+                    mask = torch.cat([torch.ones_like(mask[:, :data_cfg.N_PREV_MOTIONS]), mask], dim=1) if clip_id != 0 else mask
+                    loss_dict['flow'] += (loss_flow.mean() / 2)
                     loss_dict['vert'] += (loss_vert[mask].mean() / 2) if loss_vert is not None else 0.0
                     loss_dict['vel'] += (loss_vel[mask[:, 1:]].mean() / 2) if loss_vel is not None and torch.numel(loss_vel) > 0 else 0.0
                     loss_dict['smooth'] += (loss_smooth[mask[:, 2:]].mean() / 2) if loss_smooth is not None and torch.numel(loss_smooth) > 0 else 0.0
@@ -467,8 +470,7 @@ class FlowMatchingTrainer(TrainerBase):
                         loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'] + \
                         loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'] + \
                         loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'] + \
-                        loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'] + \
-                        loss_cfg.HEAD.W_TRANS * loss_dict['head_trans']
+                        loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth']
 
                 loss_meter['total'].update(loss.item())
                 loss_meter['flow'].update(loss_dict['flow'].item())
@@ -478,7 +480,6 @@ class FlowMatchingTrainer(TrainerBase):
                 loss_meter['head_angle'].update(loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'])
                 loss_meter['head_vel'].update(loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'])
                 loss_meter['head_smooth'].update(loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
-                loss_meter['head_trans'].update(loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
 
                 if (current_iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
                     loss_info = ' '.join([f'loss_{item} {loss.avg:.4f}' for item, loss in loss_meter.items()])

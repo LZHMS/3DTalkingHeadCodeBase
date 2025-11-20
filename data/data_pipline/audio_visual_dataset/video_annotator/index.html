@@ -3,34 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube 视频片段标注工具</title>
+    <title>视频片段标注与管理工具</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>YouTube 视频片段标注工具</h1>
+            <h1>视频片段标注与管理工具</h1>
         </header>
 
         <div class="main-content">
             <!-- 视频列表侧边栏 -->
             <aside class="video-list">
-                <h2>视频列表</h2>
-                <div class="file-upload-section">
-                    <label for="fileInput" class="upload-btn">
-                        📁 上传 .txt 文件
-                    </label>
-                    <input type="file" id="fileInput" accept=".txt" style="display: none;">
-                    <div id="fileInfo" class="file-info"></div>
+                <div class="mode-switch">
+                    <button id="urlModeBtn" class="mode-btn active">URL模式</button>
+                    <button id="localModeBtn" class="mode-btn">本地片段</button>
                 </div>
-                <div id="videoListContainer"></div>
+                
+                <!-- URL模式 -->
+                <div id="urlModePanel" class="mode-panel active">
+                    <h2>视频列表</h2>
+                    <div class="file-upload-section">
+                        <label for="fileInput" class="upload-btn">
+                            📁 上传 .txt 文件
+                        </label>
+                        <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                        <div id="fileInfo" class="file-info"></div>
+                    </div>
+                    <div id="videoListContainer"></div>
+                </div>
+                
+                <!-- 本地片段模式 -->
+                <div id="localModePanel" class="mode-panel">
+                    <h2>本地视频片段</h2>
+                    <div class="category-filter">
+                        <label>分类:</label>
+                        <select id="categorySelect">
+                            <option value="">选择分类...</option>
+                        </select>
+                    </div>
+                    <div id="localVideoList"></div>
+                </div>
             </aside>
 
             <!-- 主工作区 -->
             <main class="workspace">
+                <!-- 键盘快捷键提示 -->
+                <div id="keyboardHelp" class="keyboard-help">
+                    <button id="toggleHelpBtn" class="help-toggle-btn">❓ 快捷键</button>
+                    <div id="helpPanel" class="help-panel" style="display: none;">
+                        <h4>键盘快捷键</h4>
+                        <div class="help-content">
+                            <div class="help-section">
+                                <strong>通用:</strong>
+                                <div class="shortcut-item"><kbd>空格</kbd> 播放/暂停</div>
+                                <div class="shortcut-item"><kbd>1</kbd> 0.5x速度</div>
+                                <div class="shortcut-item"><kbd>2</kbd> 1x速度</div>
+                                <div class="shortcut-item"><kbd>3</kbd> 1.5x速度</div>
+                                <div class="shortcut-item"><kbd>←</kbd> 后退5秒</div>
+                                <div class="shortcut-item"><kbd>→</kbd> 前进5秒</div>
+                            </div>
+                            <div class="help-section" id="urlModeHelp">
+                                <strong>URL模式:</strong>
+                                <div class="shortcut-item"><kbd>I</kbd> 设置起点</div>
+                                <div class="shortcut-item"><kbd>O</kbd> 设置终点</div>
+                                <div class="shortcut-item"><kbd>Enter</kbd> 添加片段</div>
+                            </div>
+                            <div class="help-section" id="localModeHelp" style="display: none;">
+                                <strong>本地片段模式:</strong>
+                                <div class="shortcut-item"><kbd>D</kbd> 删除当前片段</div>
+                                <div class="shortcut-item"><kbd>F</kbd> 下一个片段</div>
+                                <div class="shortcut-item"><kbd>A</kbd> 上一个片段</div>
+                                <div class="shortcut-item"><kbd>S</kbd> 设置截取起点</div>
+                                <div class="shortcut-item"><kbd>E</kbd> 设置截取终点</div>
+                                <div class="shortcut-item"><kbd>X</kbd> 执行截取</div>
+                                <div class="shortcut-item"><kbd>C</kbd> 取消截取</div>
+                            </div>
+                        </div>
+                        <button id="closeHelpBtn" class="close-help-btn">关闭</button>
+                    </div>
+                </div>
+                
+                <!-- 当前片段信息 -->
+                <div id="clipInfo" class="clip-info" style="display: none;">
+                    <div class="clip-header">
+                        <h3 id="clipTitle"></h3>
+                        <div class="clip-nav">
+                            <button id="prevClipBtn">◄ 上一个</button>
+                            <span id="clipPosition"></span>
+                            <button id="nextClipBtn">下一个 ►</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 视频播放器 -->
                 <div class="player-section">
                     <div id="player"></div>
+                    <video id="localPlayer" controls style="display: none; width: 100%; max-width: 854px; background: #000;"></video>
                     <div class="player-controls">
                         <button id="playPauseBtn">播放/暂停 (空格)</button>
                         <span id="currentTime">00:00:00</span> / <span id="duration">00:00:00</span>
@@ -47,8 +116,36 @@
                     <div class="timeline-markers" id="timelineMarkers"></div>
                 </div>
 
-                <!-- 标注控制面板 -->
-                <div class="annotation-panel">
+                <!-- 本地片段专用操作 -->
+                <div id="localClipActions" class="local-clip-actions" style="display: none;">
+                    <h3>片段操作</h3>
+                    <div class="action-buttons">
+                        <button id="deleteClipBtn" class="danger-btn">🗑️ 删除当前片段</button>
+                        <button id="extractClipBtn" class="primary-btn">✂️ 截取新片段</button>
+                    </div>
+                    <div id="extractPanel" class="extract-panel" style="display: none;">
+                        <h4>从当前片段中截取新片段</h4>
+                        <div class="extract-controls">
+                            <div class="time-input-group">
+                                <label>新起始时间:</label>
+                                <input type="text" id="extractStart" placeholder="00:00:00" readonly>
+                                <button id="setExtractStartBtn">设置</button>
+                            </div>
+                            <div class="time-input-group">
+                                <label>新结束时间:</label>
+                                <input type="text" id="extractEnd" placeholder="00:00:00" readonly>
+                                <button id="setExtractEndBtn">设置</button>
+                            </div>
+                        </div>
+                        <div class="extract-actions">
+                            <button id="confirmExtractBtn" class="success-btn">确认截取并删除原片段</button>
+                            <button id="cancelExtractBtn">取消</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 标注控制面板 (URL模式) -->
+                <div id="annotationPanel" class="annotation-panel">
                     <h3>片段标注</h3>
                     <div class="time-controls">
                         <div class="time-input-group">
@@ -71,10 +168,10 @@
                     </div>
                 </div>
 
-                <!-- 标注列表 -->
-                <div class="segments-list">
+                <!-- 标注列表 (URL模式) -->
+                <div id="segmentsList" class="segments-list">
                     <h3>已标注片段</h3>
-                    <div id="segmentsList"></div>
+                    <div id="segmentsListContainer"></div>
                     <div class="export-controls">
                         <button id="exportJsonBtn">导出 JSON</button>
                         <button id="clearAllBtn">清空所有</button>

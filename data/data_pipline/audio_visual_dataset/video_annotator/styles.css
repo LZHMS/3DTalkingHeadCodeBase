@@ -41,6 +41,75 @@ header {
     font-size: 18px;
 }
 
+/* 模式切换 */
+.mode-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 10px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: bold;
+}
+
+.mode-btn:hover {
+    background: #7f8c8d;
+}
+
+.mode-btn.active {
+    background: #3498db;
+}
+
+.mode-panel {
+    display: none;
+}
+
+.mode-panel.active {
+    display: block;
+}
+
+/* 分类过滤 */
+.category-filter {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+}
+
+.category-filter label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.category-filter select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#localVideoList {
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+}
+
+#localVideoList .video-item small {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 11px;
+}
+
 .file-upload-section {
     margin-bottom: 20px;
     padding: 15px;
@@ -102,6 +171,261 @@ header {
 .workspace {
     flex: 1;
     padding: 20px;
+    position: relative;
+}
+
+/* 键盘快捷键帮助 */
+.keyboard-help {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.help-toggle-btn {
+    padding: 10px 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+}
+
+.help-toggle-btn:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.help-panel {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 320px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    padding: 20px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.help-panel h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 18px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.help-content {
+    margin-bottom: 15px;
+}
+
+.help-section {
+    margin-bottom: 20px;
+}
+
+.help-section strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+    color: #555;
+}
+
+.shortcut-item kbd {
+    display: inline-block;
+    padding: 4px 8px;
+    margin-right: 10px;
+    background: #ecf0f1;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+    color: #2c3e50;
+    box-shadow: 0 2px 0 #bdc3c7;
+}
+
+.close-help-btn {
+    width: 100%;
+    padding: 10px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.close-help-btn:hover {
+    background: #7f8c8d;
+}
+
+/* 片段信息 */
+.clip-info {
+    background: #3498db;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.clip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.clip-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.clip-nav {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.clip-nav button {
+    padding: 8px 16px;
+    background: white;
+    color: #3498db;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.clip-nav button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clip-nav span {
+    font-weight: bold;
+}
+
+/* 本地片段操作 */
+.local-clip-actions {
+    margin: 20px 0;
+    padding: 20px;
+    background: #ecf0f1;
+    border-radius: 8px;
+}
+
+.local-clip-actions h3 {
+    margin-bottom: 15px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.danger-btn {
+    flex: 1;
+    padding: 12px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.danger-btn:hover {
+    background: #c0392b;
+}
+
+.primary-btn {
+    flex: 1;
+    padding: 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.primary-btn:hover {
+    background: #2980b9;
+}
+
+/* 截取面板 */
+.extract-panel {
+    margin-top: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 4px;
+    border: 2px solid #3498db;
+}
+
+.extract-panel h4 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.extract-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.extract-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.success-btn {
+    flex: 1;
+    padding: 10px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.success-btn:hover {
+    background: #229954;
+}
+
+.extract-actions button:last-child {
+    flex: 1;
+    padding: 10px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.extract-actions button:last-child:hover {
+    background: #7f8c8d;
 }
 
 .player-section {

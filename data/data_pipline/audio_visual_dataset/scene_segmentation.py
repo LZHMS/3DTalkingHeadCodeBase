@@ -135,7 +135,7 @@ def collect_video_data_path(data_dir: str) -> List[Dict]:
                         "video-cate": video_cate,
                         "video-id": video_id,
                         "video-path": video_path,
-                        "audio-path": video_id + ".m4a"
+                        "audio-path": os.path.join(root,video_id + ".m4a")
                     })
     return video_data
 
@@ -453,17 +453,35 @@ def process_video_clips(data, args):
         - Automatically creates output directory structure: output/style-cate/video-cate/video-id/
         - Scene information for each video is saved in scene_info.json
         - If audio file doesn't exist, video file will be used as audio source
+        - If skip_existing is True, skips videos that already have scene_info.json
     """
     for item in tqdm(data, desc="processing video clips"):
         try:
             style_cate, video_cate, video_id, video_path, audio_path = item['style-cate'], item['video-cate'], \
                                                                         item['video-id'], item['video-path'], item['audio-path']
+            
+            # Create output subdirectory
+            output_subfolder = os.path.join(args.output, style_cate, video_id)
+            json_path = os.path.join(output_subfolder, "scene_info.json")
+            
+            # Check if video has already been processed
+            if args.skip_existing and os.path.exists(json_path):
+                try:
+                    # Verify that the scene_info.json file is valid and not empty
+                    with open(json_path, 'r') as f:
+                        lines = f.readlines()
+                        if len(lines) > 0:
+                            # Try to parse first line to verify it's valid JSON
+                            json.loads(lines[0])
+                            print(f"Skipping {video_id}: already processed with {len(lines)} scenes")
+                            continue
+                except (json.JSONDecodeError, IOError):
+                    print(f"Warning: Invalid or corrupted scene_info.json for {video_id}, reprocessing...")
+            
             print(f"\nProcessing video_id: {video_id} in category: {video_cate}")
             print(f"Video path: {video_path}")
 
             if os.path.exists(video_path) and os.path.isfile(video_path):
-                # Create output subdirectory
-                output_subfolder = os.path.join(args.output, style_cate, video_id)
                 os.makedirs(output_subfolder, exist_ok=True)
                 
                 subtitle_path = None
@@ -477,7 +495,6 @@ def process_video_clips(data, args):
                 )
                 
                 # Save scene information to JSON file
-                json_path = os.path.join(output_subfolder, "scene_info.json")
                 for scene_data in scenes_data:
                     save_json_entry(scene_data, json_path)
                 
@@ -507,6 +524,10 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", type=int, default=0, help="Number of worker processes to use.")
     parser.add_argument("--max-threads", type=int, default=48, help="The max threads available.")
     parser.add_argument("--threshold", type=int, default=7, help="The max samples per process.")
+
+    # Skip existing parameter
+    parser.add_argument("--skip-existing", action='store_true', 
+                       help="Skip videos that already have scene_info.json file.")
 
     # Export parameters
     parser.add_argument("--clip-style", type=str, default='video_only', 

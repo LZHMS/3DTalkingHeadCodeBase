@@ -34,3 +34,5 @@ mini_filtered_video_clips_with_captions.json
 
 data/data_pipline/audio_visual_dataset/output
 data/data_pipline/audio_visual_dataset/output_clips
+
+corrupted_backup/

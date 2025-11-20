@@ -12,7 +12,7 @@ ENV:
     NAME: "TrainingFlowTalker"
     NOTES: "Training as baseline."
     TAGS: "Baseline"
-    MODE: "online"
+    MODE: "offline"
   EXTRA:
     STYLE_ENC_CKPT: 
 
@@ -37,9 +37,9 @@ DATASET:
 DATALOADER:
   NUM_WORKERS: 4
   TRAIN:
-    BATCH_SIZE: 2
+    BATCH_SIZE: 32
   TEST:
-    BATCH_SIZE: 4
+    BATCH_SIZE: 64
 
 TDMM:
   FLAME:
@@ -77,22 +77,18 @@ ALGORITHM:
     LOG_NORMAL_MEAN: 0.0     # Log-normal sampling mean for time
     LOG_NORMAL_STD: 1.0      # Log-normal sampling std for time
 
-# Additional settings
-ADD:
-  STYLE_ENC_CKPT: ''  # Path to pre-trained style encoder checkpoint
-
 LOSS:
   NAME: "L2Loss"
   NO_CONSTRAIN_PREV: False
   GEOMETRIC:
-    W_VERTEX: 0.0      # Geometric losses are optional for flow matching
-    W_VELOCITY: 0.0    # Can be enabled if needed
-    W_SMOOTH: 0.0
+    W_VERTEX: 2e6  # weight of the vertex loss
+    W_VELOCITY: 1e6  # weight of the velocity loss
+    W_SMOOTH: 1e5   # weight of the vertex acceleration regularization
   HEAD:
-    W_ANGLE: 0.0
-    W_VELOCITY: 0.0
-    W_SMOOTH: 0.0
-    W_TRANS: 0.0
+    W_ANGLE: 0.05  # weight of the head angle loss
+    W_VELOCITY: 5.0 # weight of the head angular velocity loss
+    W_SMOOTH: 0.05  # weight of the head angular acceleration regularization
+    W_TRANS: 0.5
 
 TRAINER:
   NAME: FlowMatchingTrainer
