@@ -7,7 +7,8 @@ from collections import defaultdict
 
 from base import TrainerBase, TRAINER_REGISTRY, build_evaluator
 from datasets import HDTF_TFHPDM, StyledTalkWrapper, HDTF_TFHPWrapper
-from models import StyleEncoder, DiffTalkingHead, FLAME, FLAMEConfig
+from models import StyleEncoder, DiffTalkingHead, FLAME, build_flame_config
+from evaluation import TalkerEvaluator
 from utils import AverageMeter, truncate_motion_coef_and_audio, get_coef_dict
 
 import logging
@@ -16,14 +17,14 @@ logger: logging.Logger
 
 @TRAINER_REGISTRY.register()
 class StyleEncoderTrainer(TrainerBase):
-    def __init__(self, assistant):
-        super().__init__(assistant)
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         # Builf components of trainer
         self.build_data_loader()
         self.build_model()
-        self.evaluator = build_evaluator(assistant)
-        self.criterion  = self.build_loss_metrics(self.assistant.cfg.LOSS.NAME)
+        self.evaluator = build_evaluator(cfg)
+        self.criterion  = self.build_loss_metrics(self.cfg.LOSS.NAME)
 
     def build_data_loader(self):
         """Create essential data-related attributes.
@@ -31,7 +32,7 @@ class StyleEncoderTrainer(TrainerBase):
         A re-implementation of this method must create the
         same attributes (self.dm is optional).
         """
-        dm = HDTF_TFHPDM(self.assistant.cfg, StyledTalkWrapper, infinite_train=True)
+        dm = HDTF_TFHPDM(self.cfg, StyledTalkWrapper, infinite_train=True)
 
         self.train_loader = dm.train_loader
         self.val_loader = dm.val_loader  # optional, can be None
@@ -48,11 +49,11 @@ class StyleEncoderTrainer(TrainerBase):
         Custom trainers can re-implement this method if necessary.
         """
 
-        logger.info(f"Building model {self.assistant.cfg.MODEL.NAME} ...")
-        self.model = StyleEncoder(self.assistant.cfg.MODEL)
+        logger.info(f"Building model {self.cfg.MODEL.NAME} ...")
+        self.model = StyleEncoder(self.cfg.MODEL)
 
-        if self.assistant.cfg.MODEL.INIT_WEIGHTS:
-            self.load_pretrained_weights(self.model, self.assistant.cfg.MODEL.INIT_WEIGHTS)
+        if self.cfg.MODEL.INIT_WEIGHTS:
+            self.load_pretrained_weights(self.model, self.cfg.MODEL.INIT_WEIGHTS)
         self.model.to(self.device)
         params = self.count_num_param(self.model)
         if type(params) is tuple:
@@ -84,12 +85,12 @@ class StyleEncoderTrainer(TrainerBase):
         self.loss_meter["loss_base"].update(loss)
 
         # update learning rate
-        if (self.iter + 1) % self.assistant.cfg.OPTIM.LR_UPDATE_FREQ == 0:
+        if (self.iter + 1) % self.cfg.OPTIM.LR_UPDATE_FREQ == 0:
             self.update_lr()
 
         eta_seconds = self.batch_time.avg * (self.max_iters - self.iter)
         eta = str(datetime.timedelta(seconds=int(eta_seconds)))
-        if (self.iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+        if (self.iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
             info = []
             info += [f"iter [{self.iter + 1}/{self.max_iters}]"]
             info += [f"time {self.batch_time.val:.3f} ({self.batch_time.avg:.3f})"]
@@ -99,8 +100,8 @@ class StyleEncoderTrainer(TrainerBase):
             info += [f"eta {eta}"]
             logger.info(" ".join(info))
         
-        if self.assistant.cfg.ENV.USE_WANDB:
-            self.assistant.wandb_run.log({"iter": self.iter + 1,
+        if self.cfg.ENV.USE_WANDB:
+            self.wandb_run.log({"iter": self.iter + 1,
                                     "batch_time": self.batch_time.val,
                                     "train/loss": self.loss_meter['loss_base'].avg,
                                     "train/lr": self.get_current_lr()})
@@ -111,17 +112,17 @@ class StyleEncoderTrainer(TrainerBase):
         last_iter = (self.iter + 1) == self.max_iters
         
         # Validation
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
+        if ((self.iter + 1) % self.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
             self.test(split="val", n_rounds=200)
 
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
+        if ((self.iter + 1) % self.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
             self.save_model(iter=self.iter, directory=self.output_dir)
 
     def forward_backward(self, batch):
         name, motion_coef = self.parse_batch(batch)
         
         feats_0, feats_1 = self.model(motion_coef[0]), self.model(motion_coef[1])
-        loss = self.criterion(feats_0, feats_1, self.assistant.cfg.LOSS.CONTRASTIVE.TEMPRATURE)
+        loss = self.criterion(feats_0, feats_1, self.cfg.LOSS.CONTRASTIVE.TEMPRATURE)
         self.model_backward_and_update(loss)
         return loss
     
@@ -132,7 +133,7 @@ class StyleEncoderTrainer(TrainerBase):
         self.evaluator.reset()
 
         if split is None:
-            split = self.assistant.cfg.TEST.SPLIT
+            split = self.cfg.TEST.SPLIT
 
         if split == "val" and self.val_loader is not None:
             data_loader = self.val_loader
@@ -149,16 +150,16 @@ class StyleEncoderTrainer(TrainerBase):
                 name, motion_coef = self.parse_batch(batch)
         
                 feats_0, feats_1 = self.model(motion_coef[0]), self.model(motion_coef[1])
-                loss = self.criterion(feats_0, feats_1, self.assistant.cfg.LOSS.CONTRASTIVE.TEMPRATURE)
+                loss = self.criterion(feats_0, feats_1, self.cfg.LOSS.CONTRASTIVE.TEMPRATURE)
                 loss_meter.update(loss.item())
 
-                if (current_iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+                if (current_iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
                     logger.info('iter: {} '
                                 'loss_val: {} '
                                 .format(current_iter + 1, loss_meter.avg))
                     
-                if self.assistant.cfg.ENV.USE_WANDB:
-                    self.assistant.wandb_run.log({"val/loss": loss_meter.avg})
+                if self.cfg.ENV.USE_WANDB:
+                    self.wandb_run.log({"val/loss": loss_meter.avg})
                 self.write_scalar("val/loss", loss_meter.avg, current_iter)
 
     def parse_batch(self, batch):
@@ -176,14 +177,14 @@ class StyleEncoderTrainer(TrainerBase):
 
 @TRAINER_REGISTRY.register()
 class DiffPoseTalkTrainer(TrainerBase):
-    def __init__(self, assistant):
-        super().__init__(assistant)
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
-        # load pre-trained style encoder
-        if self.assistant.cfg.ADD.STYLE_ENC_CKPT != '':
-            checkpoint = self.load_checkpoint(self.assistant.cfg.ADD.STYLE_ENC_CKPT)
+        # Load pre-trained style encoder
+        if self.cfg.ENV.EXTRA.STYLE_ENC_CKPT != '':
+            checkpoint = self.load_checkpoint(self.cfg.ENV.EXTRA.STYLE_ENC_CKPT)
             logger.info(
-                f"Load {self.assistant.cfg.ADD.STYLE_ENC_CKPT} to StyleEncoder (iter={checkpoint['iter']})"
+                f"Load {self.cfg.ENV.EXTRA.STYLE_ENC_CKPT} to StyleEncoder (iter={checkpoint['iter']})"
             )
         else:
             raise ValueError("Please provide pre-trained style encoder checkpoint path.")
@@ -193,43 +194,31 @@ class DiffPoseTalkTrainer(TrainerBase):
         self.style_enc.eval()
 
         # Avatar model for loss computation
-        self.flame = FLAME(FLAMEConfig).to(self.device)
+        self.flame = FLAME(build_flame_config(self.cfg.TDMM.FLAME.ROOT)).to(self.device)
         logger.info(f"Loaded FLAME model for loss computation.")
 
         # Build components of trainer
         self.build_data_loader()
         self.build_model()
-        self.evaluator = build_evaluator(assistant)
-        self.criterion  = self.build_loss_metrics(self.assistant.cfg.LOSS.NAME)
+        self.evaluator = build_evaluator(cfg)
+        self.criterion = self.build_loss_metrics(self.cfg.LOSS.NAME)
 
     def build_data_loader(self):
-        """Create essential data-related attributes.
-
-        A re-implementation of this method must create the
-        same attributes (self.dm is optional).
-        """
-        dm = HDTF_TFHPDM(self.assistant.cfg, HDTF_TFHPWrapper, infinite_train=True)
+        """Create essential data-related attributes."""
+        dm = HDTF_TFHPDM(self.cfg, HDTF_TFHPWrapper, infinite_train=True)
 
         self.train_loader = dm.train_loader
-        self.val_loader = dm.val_loader  # optional, can be None
+        self.val_loader = dm.val_loader
         self.test_loader = dm.test_loader
-
         self.dm = dm
 
     def build_model(self):
-        """Build and register model.
+        """Build and register model."""
+        logger.info(f"Building model {self.cfg.MODEL.NAME} ...")
+        self.model = DiffTalkingHead(self.cfg)
 
-        The default builds a classification model along with its
-        optimizer and scheduler.
-
-        Custom trainers can re-implement this method if necessary.
-        """
-
-        logger.info(f"Building model {self.assistant.cfg.MODEL.NAME} ...")
-        self.model = DiffTalkingHead(self.assistant.cfg)
-
-        if self.assistant.cfg.MODEL.INIT_WEIGHTS:
-            self.load_pretrained_weights(self.model, self.assistant.cfg.MODEL.INIT_WEIGHTS)
+        if self.cfg.MODEL.INIT_WEIGHTS:
+            self.load_pretrained_weights(self.model, self.cfg.MODEL.INIT_WEIGHTS)
         self.model.to(self.device)
         params = self.count_num_param(self.model)
         if type(params) is tuple:
@@ -249,25 +238,27 @@ class DiffPoseTalkTrainer(TrainerBase):
             self.model = nn.DataParallel(self.model)
     
     def run_iter(self):
+        """Run one training iteration."""
         # Load data
         batch = next(self.train_loader)
         
         self.data_time.update(time.time() - self.end)
 
-        # Forward
+        # Forward and backward
         loss_dict = self.forward_backward(batch)
 
         self.batch_time.update(time.time() - self.end)
         for k, v in loss_dict.items():
             self.loss_meter[k].update(v)
         
-        # update learning rate
-        if (self.iter + 1) % self.assistant.cfg.OPTIM.LR_UPDATE_FREQ == 0:
+        # Update learning rate
+        if (self.iter + 1) % self.cfg.OPTIM.LR_UPDATE_FREQ == 0:
             self.update_lr()
 
+        # Logging
         eta_seconds = self.batch_time.avg * (self.max_iters - self.iter)
         eta = str(datetime.timedelta(seconds=int(eta_seconds)))
-        if (self.iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+        if (self.iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
             info = []
             info += [f"iter [{self.iter + 1}/{self.max_iters}]"]
             info += [f"time {self.batch_time.val:.3f} ({self.batch_time.avg:.3f})"]
@@ -277,27 +268,32 @@ class DiffPoseTalkTrainer(TrainerBase):
             info += [f"eta {eta}"]
             logger.info(" ".join(info))
         
-        if self.assistant.cfg.ENV.USE_WANDB:
+        if self.cfg.ENV.USE_WANDB:
             log_dict = {"iter": self.iter + 1, "batch_time": self.batch_time.val, "train/lr": self.get_current_lr()}
             log_dict.update({f"train/loss_{item}": loss.avg for item, loss in self.loss_meter.items()})
-            self.assistant.wandb_run.log(log_dict)
+            self.wandb_run.log(log_dict)
         
         for item, loss in self.loss_meter.items():
             self.write_scalar(f"train/loss_{item}", loss.avg, self.iter)
         self.write_scalar("train/lr", self.get_current_lr(), self.iter)
     
     def after_iter(self):
+        """Actions after each iteration."""
         last_iter = (self.iter + 1) == self.max_iters
         
         # Validation
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
+        if ((self.iter + 1) % self.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
             self.test(split="val", n_rounds=200)
 
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
+        # Save model
+        if ((self.iter + 1) % self.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
             self.save_model(iter=self.iter, directory=self.output_dir)
 
     def forward_backward(self, batch):
-        data_cfg, loss_cfg = self.assistant.cfg.DATASET.HDTF_TFHP, self.assistant.cfg.LOSS
+        """
+        Forward and backward pass for Diffusion Model.
+        """
+        data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
         name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
         
         # Extract style features
@@ -309,20 +305,24 @@ class DiffPoseTalkTrainer(TrainerBase):
 
         if data_cfg.USE_CONTEXT_AUDIO:
             # Extract audio features
-            audio_feat = model.extract_audio_feature(torch.cat(audio_pair, dim=1), data_cfg.MOTIONS * 2)  # (N, 2L, :)
+            audio_feat = model.extract_audio_feature(torch.cat(audio_pair, dim=1), data_cfg.MOTIONS * 2)
 
-        loss_dict = {'noise': 0.0, 'vert': 0.0, 'vel': 0.0, 'smooth': 0.0,
+        # Initialize loss dict
+        loss_dict = {'flow': 0.0, 'vert': 0.0, 'vel': 0.0, 'smooth': 0.0,
                      'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0, 'head_trans': 0.0}
+        
         for clip_id in range(2):
             audio = audio_pair[clip_id]  # (N, L_a)
             motion_coef = motion_coef_pair[clip_id]  # (N, L, 50+x)
             style = style_pair[1 - clip_id] if style_pair else None
             batch_size = audio.shape[0]
 
-            # truncate input audio and motion according to trunc_prob
-            if (clip_id == 0 and np.random.rand() < data_cfg.TRUNC_PROB1) or (clip_id != 0 and np.random.rand() < data_cfg.TRUNC_PROB2):
-                audio_in, motion_coef_in, end_idx = truncate_motion_coef_and_audio(audio, motion_coef, data_cfg.MOTIONS,
-                                                                                self.dm.dataset.audio_unit, data_cfg.PAD_MODE)
+            # Truncate input audio and motion according to trunc_prob
+            if (clip_id == 0 and np.random.rand() < data_cfg.TRUNC_PROB1) or \
+               (clip_id != 0 and np.random.rand() < data_cfg.TRUNC_PROB2):
+                audio_in, motion_coef_in, end_idx = truncate_motion_coef_and_audio(
+                    audio, motion_coef, data_cfg.MOTIONS, self.dm.dataset.audio_unit, data_cfg.PAD_MODE
+                )
                 if data_cfg.USE_CONTEXT_AUDIO and clip_id != 0:
                     # use contextualized audio feature for the second clip
                     audio_in = model.extract_audio_feature(torch.cat([audio_pair[clip_id - 1], audio_in], dim=1),
@@ -334,8 +334,8 @@ class DiffPoseTalkTrainer(TrainerBase):
                     audio_in = audio
                 motion_coef_in, end_idx = motion_coef, None
 
-            # prepare indicator if needed
-            if self.assistant.cfg.MODEL.HEAD.USE_INDICATOR:
+            # Prepare indicator if needed
+            if self.cfg.MODEL.HEAD.USE_INDICATOR:
                 if end_idx is not None:
                     indicator = torch.arange(data_cfg.MOTIONS, device=self.device).expand(batch_size, -1) < end_idx.unsqueeze(1)
                 else:
@@ -374,9 +374,9 @@ class DiffPoseTalkTrainer(TrainerBase):
                 
                 # geometric losses
                 coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
-                                    rot_repr=self.assistant.cfg.MODEL.HEAD.ROT_REPR)
+                                    rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
                 coef_pred = get_coef_dict(target, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
-                                    rot_repr=self.assistant.cfg.MODEL.HEAD.ROT_REPR)
+                                    rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
                 
                 verts_gt, _, _ = self.flame(coef_gt['shape'].view(-1, 100), coef_gt['exp'].view(-1, 50),
                                        coef_gt['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
@@ -394,7 +394,7 @@ class DiffPoseTalkTrainer(TrainerBase):
                 loss_smooth = self.criterion(vel_pred[:, 1:], vel_pred[:, :-1], reduction='none') if loss_cfg.GEOMETRIC.W_SMOOTH > 0 else None
 
                 # head pose losss
-                if not self.assistant.cfg.MODEL.HEAD.NO_HEAD_POSE:
+                if not self.cfg.MODEL.HEAD.NO_HEAD_POSE:
                     head_pose_gt = motion_coef_gt[:, :, 50:53]
                     head_pose_pred = target[:, :, 50:53]
 
@@ -470,6 +470,7 @@ class DiffPoseTalkTrainer(TrainerBase):
         loss_dict['head_smooth'] = (loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
         loss_dict['head_trans'] = (loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
         loss_dict['total'] = loss
+        
         self.model_backward_and_update(loss)
         return loss_dict
     
@@ -480,7 +481,7 @@ class DiffPoseTalkTrainer(TrainerBase):
         self.evaluator.reset()
 
         if split is None:
-            split = self.assistant.cfg.TEST.SPLIT
+            split = self.cfg.TEST.SPLIT
 
         if split == "val" and self.val_loader is not None:
             data_loader = self.val_loader
@@ -492,9 +493,9 @@ class DiffPoseTalkTrainer(TrainerBase):
 
         loss_meter = defaultdict(AverageMeter)
         for test_round in range(n_rounds):
-          for batch_idx, batch in enumerate(data_loader):
+            for batch_idx, batch in enumerate(data_loader):
                 current_iter = test_round * len(data_loader) + batch_idx
-                data_cfg, loss_cfg = self.assistant.cfg.DATASET.HDTF_TFHP, self.assistant.cfg.LOSS
+                data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
                 name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
         
                 # Extract style features
@@ -532,7 +533,7 @@ class DiffPoseTalkTrainer(TrainerBase):
                         motion_coef_in, end_idx = motion_coef, None
 
                     # prepare indicator if needed
-                    if self.assistant.cfg.MODEL.HEAD.USE_INDICATOR:
+                    if self.cfg.MODEL.HEAD.USE_INDICATOR:
                         if end_idx is not None:
                             indicator = torch.arange(data_cfg.MOTIONS, device=self.device).expand(batch_size, -1) < end_idx.unsqueeze(1)
                         else:
@@ -572,9 +573,9 @@ class DiffPoseTalkTrainer(TrainerBase):
                         
                         # geometric losses
                         coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
-                                            rot_repr=self.assistant.cfg.MODEL.HEAD.ROT_REPR)
+                                            rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
                         coef_pred = get_coef_dict(target, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
-                                            rot_repr=self.assistant.cfg.MODEL.HEAD.ROT_REPR)
+                                            rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
                         
                         verts_gt, _, _ = self.flame(coef_gt['shape'].view(-1, 100), coef_gt['exp'].view(-1, 50),
                                             coef_gt['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
@@ -592,7 +593,7 @@ class DiffPoseTalkTrainer(TrainerBase):
                         loss_smooth = self.criterion(vel_pred[:, 1:], vel_pred[:, :-1], reduction='none') if loss_cfg.GEOMETRIC.W_SMOOTH > 0 else None
 
                         # head pose losss
-                        if not self.assistant.cfg.MODEL.HEAD.NO_HEAD_POSE:
+                        if not self.cfg.MODEL.HEAD.NO_HEAD_POSE:
                             head_pose_gt = motion_coef_gt[:, :, 50:53]
                             head_pose_pred = target[:, :, 50:53]
 
@@ -669,16 +670,17 @@ class DiffPoseTalkTrainer(TrainerBase):
                 loss_meter['head_smooth'].update(loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
                 loss_meter['head_trans'].update(loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
 
-                if (current_iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+                if (current_iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
                     loss_info = ' '.join([f'loss_{item} {loss.avg:.4f}' for item, loss in loss_meter.items()])
                     logger.info(f'iter: {current_iter + 1} {loss_info}')
                     
                 for item, loss in loss_meter.items():
-                    if self.assistant.cfg.ENV.USE_WANDB:
-                        self.assistant.wandb_run.log({f"val/loss_{item}": loss.avg})
+                    if self.cfg.ENV.USE_WANDB:
+                        self.wandb_run.log({f"val/loss_{item}": loss.avg})
                     self.write_scalar(f"val/loss_{item}", loss.avg, current_iter)
 
     def parse_batch(self, batch):
+        """Parse batch data."""
         name = batch["name"]
         motion_coef_pair = [motion.to(self.device) for motion in batch["motion_coef"]]
         shape_coef = batch["shape_coef"][:, 0, :].to(self.device)
@@ -687,6 +689,7 @@ class DiffPoseTalkTrainer(TrainerBase):
         return name, audio_pair, motion_coef_pair, shape_coef
 
     def get_current_lr(self, names=None):
+        """Get current learning rate."""
         names = self.get_model_names(names)
         name = names[0]
         return self._optims[name].param_groups[0]["lr"]

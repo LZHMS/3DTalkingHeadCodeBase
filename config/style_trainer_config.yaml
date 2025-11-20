@@ -4,6 +4,15 @@ ENV:
   DESCRIPTION: Train the style encoder of DiffPoseTalk.
   OUTPUT_DIR: ./output
   VERBOSE: True
+  USE_WANDB: True
+  WANDB:
+    KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
+    ENTITY: "3DVZHao"
+    PROJECT: "FLowTalker"
+    NAME: "TrainingStyleEncoder"
+    NOTES: "Training as baseline."
+    TAGS: "Baseline"
+    MODE: "online"
 
 DATASET:
   NAME: HDTF_TFHP
@@ -63,4 +72,4 @@ OPTIM:
 
 TEST:
   NO_TEST: False
-  EVALUATOR: CodeTalkerEvaluator
+  EVALUATOR: TalkerEvaluator

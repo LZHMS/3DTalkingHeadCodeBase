@@ -41,18 +41,16 @@ class Struct(object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
-
-__dir__ = Path(__file__).parent.absolute()
-FLAMEConfig = SimpleNamespace(
-    flame_model_path=str(__dir__ / 'data/FLAME2020/generic_model.pkl'),
-    n_shape=100,
-    n_exp=50,
-    n_tex=50,
-    tex_type='BFM',
-    tex_path=str(__dir__ / 'data/FLAME2020/FLAME_albedo_from_BFM.npz'),
-    flame_lmk_embedding_path=str(__dir__ / 'data/landmark_embedding.npy')
-)
-
+def build_flame_config(flame_root: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        flame_model_path=Path(flame_root, 'FLAME2020/generic_model.pkl'),
+        n_shape=100,
+        n_exp=50,
+        n_tex=50,
+        tex_type='BFM',
+        tex_path=Path(flame_root, 'FLAME2020/FLAME_albedo_from_BFM.npz'),
+        flame_lmk_embedding_path=Path(flame_root, 'landmark_embedding.npy')
+    )
 
 class FLAME(nn.Module):
     """

@@ -5,18 +5,18 @@ logger: logging.Logger
 EVALUATOR_REGISTRY = Registry("EVALUATOR")
 
 
-def build_evaluator(assistant):
+def build_evaluator(cfg):
     avai_evaluators = EVALUATOR_REGISTRY.registered_names()
-    check_availability(assistant.cfg.TEST.EVALUATOR, avai_evaluators)
-    if assistant.cfg.ENV.VERBOSE:
-        logger.info("Loading evaluator: {}".format(assistant.cfg.TEST.EVALUATOR))
-    return EVALUATOR_REGISTRY.get(assistant.cfg.TEST.EVALUATOR)(assistant.cfg)  
+    check_availability(cfg.TEST.EVALUATOR, avai_evaluators)
+    if cfg.ENV.VERBOSE:
+        logger.info("Loading evaluator: {}".format(cfg.TEST.EVALUATOR))
+    return EVALUATOR_REGISTRY.get(cfg.TEST.EVALUATOR)(cfg)  
 
 class EvaluatorBase:
     """Base evaluator."""
 
-    def __init__(self, assistant):
-        self.assistant = assistant
+    def __init__(self, cfg):
+        self.cfg = cfg
 
     def reset(self):
         raise NotImplementedError

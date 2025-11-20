@@ -4,6 +4,8 @@ ENV:
   DESCRIPTION: Train the diffusion model of DiffPoseTalk.
   OUTPUT_DIR: ./output
   VERBOSE: True
+  EXTRA:
+    STYLE_ENC_CKPT: 
 
 DATASET:
   NAME: HDTF_TFHP

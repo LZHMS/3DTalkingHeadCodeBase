@@ -4,6 +4,17 @@ ENV:
   DESCRIPTION: Train the Flow Matching model for 3D Talking Head.
   OUTPUT_DIR: ./output
   VERBOSE: True
+  USE_WANDB: True
+  WANDB:
+    KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
+    ENTITY: "3DVZHao"
+    PROJECT: "FLowTalker"
+    NAME: "TrainingFlowTalker"
+    NOTES: "Training as baseline."
+    TAGS: "Baseline"
+    MODE: "online"
+  EXTRA:
+    STYLE_ENC_CKPT: 
 
 DATASET:
   NAME: HDTF_TFHP
@@ -26,9 +37,13 @@ DATASET:
 DATALOADER:
   NUM_WORKERS: 4
   TRAIN:
-    BATCH_SIZE: 32
+    BATCH_SIZE: 2
   TEST:
-    BATCH_SIZE: 64
+    BATCH_SIZE: 4
+
+TDMM:
+  FLAME:
+    ROOT: ./pretrained/FLAME
 
 MODEL:
   NAME: FlowMatchingHead
@@ -47,6 +62,13 @@ MODEL:
     HIDDEN_SIZE: 512
     NUM_HIDDEN_LAYERS: 8
     NUM_ATTENTION_HEADS: 8
+  TAIL:
+    MLP_RATIO: 4
+  GUIDING_CONDITIONS: 'audio,style'
+  CFG_MODE: 'incremental'    # 'independent' or 'incremental'
+
+ALGORITHM:
+  FLOWMATCHING:
     # Flow Matching specific parameters
     MIN_SIGMA: 0.0           # Minimum sigma for numerical stability
     INFERENCE_MODE: 'euler'  # 'euler' or 'adaptive' for ODE solving
@@ -54,10 +76,6 @@ MODEL:
     REVERSE_FLOW: True       # Use reverse flow (x1->x0)
     LOG_NORMAL_MEAN: 0.0     # Log-normal sampling mean for time
     LOG_NORMAL_STD: 1.0      # Log-normal sampling std for time
-  TAIL:
-    MLP_RATIO: 4
-  GUIDING_CONDITIONS: 'audio,style'
-  CFG_MODE: 'incremental'    # 'independent' or 'incremental'
 
 # Additional settings
 ADD:
@@ -97,4 +115,4 @@ OPTIM:
 
 TEST:
   NO_TEST: False
-  EVALUATOR: CodeTalkerEvaluator
+  EVALUATOR: TalkerEvaluator

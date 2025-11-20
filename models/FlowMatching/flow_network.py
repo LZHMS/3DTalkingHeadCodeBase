@@ -20,7 +20,7 @@ class FlowDenoisingNetwork(nn.Module):
         super().__init__()
 
         # Model parameters
-        self.use_style = True if cfg.ADD.STYLE_ENC_CKPT else False
+        self.use_style = True if cfg.ENV.EXTRA.STYLE_ENC_CKPT else False
         self.motion_feat_dim = 51 if cfg.MODEL.HEAD.NO_HEAD_POSE else 54
         self.shape_feat_dim = 100
         if self.use_style:

@@ -11,7 +11,8 @@ from collections import defaultdict
 
 from base import TrainerBase, TRAINER_REGISTRY, build_evaluator
 from datasets import HDTF_TFHPDM, StyledTalkWrapper, HDTF_TFHPWrapper
-from models import StyleEncoder, FlowMatchingHead, FLAME, FLAMEConfig
+from models import StyleEncoder, FlowMatchingHead, FLAME, build_flame_config
+from evaluation import TalkerEvaluator
 from utils import AverageMeter, truncate_motion_coef_and_audio, get_coef_dict
 
 import logging
@@ -22,14 +23,14 @@ logger: logging.Logger
 class FlowMatchingTrainer(TrainerBase):
     """Trainer for Flow Matching based talking head generation."""
     
-    def __init__(self, assistant):
-        super().__init__(assistant)
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         # Load pre-trained style encoder
-        if self.assistant.cfg.ADD.STYLE_ENC_CKPT != '':
-            checkpoint = self.load_checkpoint(self.assistant.cfg.ADD.STYLE_ENC_CKPT)
+        if self.cfg.ENV.EXTRA.STYLE_ENC_CKPT != '':
+            checkpoint = self.load_checkpoint(self.cfg.ENV.EXTRA.STYLE_ENC_CKPT)
             logger.info(
-                f"Load {self.assistant.cfg.ADD.STYLE_ENC_CKPT} to StyleEncoder (iter={checkpoint['iter']})"
+                f"Load {self.cfg.ENV.EXTRA.STYLE_ENC_CKPT} to StyleEncoder (iter={checkpoint['iter']})"
             )
         else:
             raise ValueError("Please provide pre-trained style encoder checkpoint path.")
@@ -39,18 +40,18 @@ class FlowMatchingTrainer(TrainerBase):
         self.style_enc.eval()
 
         # Avatar model for loss computation
-        self.flame = FLAME(FLAMEConfig).to(self.device)
+        self.flame = FLAME(build_flame_config(self.cfg.TDMM.FLAME.ROOT)).to(self.device)
         logger.info(f"Loaded FLAME model for loss computation.")
 
         # Build components of trainer
         self.build_data_loader()
         self.build_model()
-        self.evaluator = build_evaluator(assistant)
-        self.criterion = self.build_loss_metrics(self.assistant.cfg.LOSS.NAME)
+        self.evaluator = build_evaluator(cfg)
+        self.criterion = self.build_loss_metrics(self.cfg.LOSS.NAME)
 
     def build_data_loader(self):
         """Create essential data-related attributes."""
-        dm = HDTF_TFHPDM(self.assistant.cfg, HDTF_TFHPWrapper, infinite_train=True)
+        dm = HDTF_TFHPDM(self.cfg, HDTF_TFHPWrapper, infinite_train=True)
 
         self.train_loader = dm.train_loader
         self.val_loader = dm.val_loader
@@ -59,13 +60,12 @@ class FlowMatchingTrainer(TrainerBase):
 
     def build_model(self):
         """Build and register model."""
-        logger.info(f"Building model FlowMatchingHead ...")
-        self.model = FlowMatchingHead(self.assistant.cfg)
+        logger.info(f"Building model {self.cfg.MODEL.NAME} ...")
+        self.model = FlowMatchingHead(self.cfg)
 
-        if self.assistant.cfg.MODEL.INIT_WEIGHTS:
-            self.load_pretrained_weights(self.model, self.assistant.cfg.MODEL.INIT_WEIGHTS)
+        if self.cfg.MODEL.INIT_WEIGHTS:
+            self.load_pretrained_weights(self.model, self.cfg.MODEL.INIT_WEIGHTS)
         self.model.to(self.device)
-        
         params = self.count_num_param(self.model)
         if type(params) is tuple:
             logger.info(f"Params: total {params[0]:,}, trainable {params[1]:,}")
@@ -98,13 +98,13 @@ class FlowMatchingTrainer(TrainerBase):
             self.loss_meter[k].update(v)
         
         # Update learning rate
-        if (self.iter + 1) % self.assistant.cfg.OPTIM.LR_UPDATE_FREQ == 0:
+        if (self.iter + 1) % self.cfg.OPTIM.LR_UPDATE_FREQ == 0:
             self.update_lr()
 
         # Logging
         eta_seconds = self.batch_time.avg * (self.max_iters - self.iter)
         eta = str(datetime.timedelta(seconds=int(eta_seconds)))
-        if (self.iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+        if (self.iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
             info = []
             info += [f"iter [{self.iter + 1}/{self.max_iters}]"]
             info += [f"time {self.batch_time.val:.3f} ({self.batch_time.avg:.3f})"]
@@ -114,10 +114,10 @@ class FlowMatchingTrainer(TrainerBase):
             info += [f"eta {eta}"]
             logger.info(" ".join(info))
         
-        if self.assistant.cfg.ENV.USE_WANDB:
+        if self.cfg.ENV.USE_WANDB:
             log_dict = {"iter": self.iter + 1, "batch_time": self.batch_time.val, "train/lr": self.get_current_lr()}
             log_dict.update({f"train/loss_{item}": loss.avg for item, loss in self.loss_meter.items()})
-            self.assistant.wandb_run.log(log_dict)
+            self.wandb_run.log(log_dict)
         
         for item, loss in self.loss_meter.items():
             self.write_scalar(f"train/loss_{item}", loss.avg, self.iter)
@@ -128,11 +128,11 @@ class FlowMatchingTrainer(TrainerBase):
         last_iter = (self.iter + 1) == self.max_iters
         
         # Validation
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
+        if ((self.iter + 1) % self.cfg.TRAIN.EVAL_FREQ == 0) or last_iter:
             self.test(split="val", n_rounds=200)
 
         # Save model
-        if ((self.iter + 1) % self.assistant.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
+        if ((self.iter + 1) % self.cfg.TRAIN.SAVE_FREQ == 0) or last_iter:
             self.save_model(iter=self.iter, directory=self.output_dir)
 
     def forward_backward(self, batch):
@@ -140,7 +140,7 @@ class FlowMatchingTrainer(TrainerBase):
         Forward and backward pass for Flow Matching.
         Adapted from DiffPoseTalkTrainer but using flow matching instead of diffusion.
         """
-        data_cfg, loss_cfg = self.assistant.cfg.DATASET.HDTF_TFHP, self.assistant.cfg.LOSS
+        data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
         name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
         
         # Extract style features
@@ -182,7 +182,7 @@ class FlowMatchingTrainer(TrainerBase):
                 motion_coef_in, end_idx = motion_coef, None
 
             # Prepare indicator if needed
-            if self.assistant.cfg.MODEL.HEAD.USE_INDICATOR:
+            if self.cfg.MODEL.HEAD.USE_INDICATOR:
                 if end_idx is not None:
                     indicator = torch.arange(data_cfg.MOTIONS, device=self.device).expand(batch_size, -1) < end_idx.unsqueeze(1)
                 else:
@@ -192,7 +192,7 @@ class FlowMatchingTrainer(TrainerBase):
 
             # Forward through flow matching model
             if clip_id == 0:
-                predicted_v, target_v, prev_motion_coef, prev_audio_feat = self.model(
+                predicted_v, target_v, motion_pre, prev_motion_coef, prev_audio_feat = self.model(
                     motion_coef_in, audio_in, shape_coef, style, indicator=indicator
                 )
                 if end_idx is not None:
@@ -206,32 +206,106 @@ class FlowMatchingTrainer(TrainerBase):
                     prev_motion_coef = prev_motion_coef[:, -data_cfg.N_PREV_MOTIONS:]
                     prev_audio_feat = prev_audio_feat[:, -data_cfg.N_PREV_MOTIONS:]
             else:
-                predicted_v, target_v, _, _ = self.model(
+                predicted_v, target_v, motion_pre, _, _ = self.model(
                     motion_coef_in, audio_in, shape_coef, style,
                     prev_motion_coef, prev_audio_feat, indicator=indicator
                 )
             
             # Flow matching loss
-            loss_flow = self.criterion(predicted_v, target_v[:, data_cfg.N_PREV_MOTIONS:], reduction='none')
+            loss_flow = self.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
             
-            # Geometric losses (optional, can be computed from predicted samples)
-            # For flow matching, we can optionally compute geometric losses
-            # by predicting x0 from the flow and comparing with ground truth
-            if loss_cfg.GEOMETRIC.W_VERTEX > 0 or loss_cfg.GEOMETRIC.W_VELOCITY > 0 or loss_cfg.GEOMETRIC.W_SMOOTH > 0:
-                # This part is optional and can be enabled if needed
-                # For now, we focus on flow matching loss
-                pass
+            # Geometric losses
+            motion_coef_gt = torch.cat([prev_motion_coef, motion_coef_in], dim=1) if clip_id != 0 else motion_coef_in
+            print(motion_coef_gt.shape)
+            coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
+                                rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+            coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
+                                rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+            
+            verts_gt, _, _ = self.flame(coef_gt['shape'].view(-1, 100), coef_gt['exp'].view(-1, 50),
+                                    coef_gt['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
+            verts_pred, _, _ = self.flame(coef_pred['shape'].view(-1, 100), coef_pred['exp'].view(-1, 50),
+                                        coef_pred['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
+            
+            seq_len = motion_pre.shape[1]
+            verts_gt, verts_pred = verts_gt.view(-1, seq_len, 5023, 3), verts_pred.view(-1, seq_len, 5023, 3)
+            loss_vert = self.criterion(verts_gt, verts_pred, reduction='none') if loss_cfg.GEOMETRIC.W_VERTEX > 0 else None
+
+            vel_gt, vel_pred = verts_gt[:, 1:] - verts_gt[:, :-1], verts_pred[:, 1:] - verts_pred[:, :-1]
+            loss_vel = self.criterion(vel_gt, vel_pred, reduction='none') if loss_cfg.GEOMETRIC.W_VELOCITY > 0 else None
+
+            vel_pred = verts_pred[:, 1:] - verts_pred[:, :-1]
+            loss_smooth = self.criterion(vel_pred[:, 1:], vel_pred[:, :-1], reduction='none') if loss_cfg.GEOMETRIC.W_SMOOTH > 0 else None
+
+            # head pose losss
+            if not self.cfg.MODEL.HEAD.NO_HEAD_POSE:
+                head_pose_gt = motion_coef_gt[:, :, 50:53]
+                head_pose_pred = motion_pre[:, :, 50:53]
+
+                loss_head_angle = self.criterion(head_pose_gt, head_pose_pred, reduction='none') if loss_cfg.HEAD.W_ANGLE > 0 else None
+
+                head_vel_gt, head_vel_pred = head_pose_gt[:, 1:] - head_pose_gt[:, :-1], head_pose_pred[:, 1:] - head_pose_pred[:, :-1]
+                loss_head_vel = self.criterion(head_vel_gt, head_vel_pred, reduction='none') if loss_cfg.HEAD.W_VELOCITY > 0 else None
+                
+                head_vel_pred = head_pose_pred[:, 1:] - head_pose_pred[:, :-1]
+                loss_head_smooth = self.criterion(head_vel_pred[:, 1:], head_vel_pred[:, :-1], reduction='none') if loss_cfg.HEAD.W_SMOOTH > 0 else None
+
+                if clip_id != 0 and loss_cfg.HEAD.W_TRANS > 0:
+                    # # version 1: constrain both the predicted previous and current motions (x_{-3} ~ x_{2})
+                    # head_pose_trans = head_pose_pred[:, args.n_prev_motions - 3:args.n_prev_motions + 3]
+                    # head_vel_pred = head_pose_trans[:, 1:] - head_pose_trans[:, :-1]
+                    # head_accel_pred = head_vel_pred[:, 1:] - head_vel_pred[:, :-1]
+
+                    # version 2: constrain only the predicted current motions (x_{0} ~ x_{2})
+                    head_pose_trans = torch.cat([head_pose_gt[:, data_cfg.N_PREV_MOTIONS - 3:data_cfg.N_PREV_MOTIONS],
+                                                head_pose_pred[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 3]], dim=1)
+                    head_vel_pred = head_pose_trans[:, 1:] - head_pose_trans[:, :-1]
+                    head_accel_pred = head_vel_pred[:, 1:] - head_vel_pred[:, :-1]
+
+                    # will constrain x_{-2|0} ~ x_{1}
+                    loss_head_trans_vel = self.criterion(head_vel_pred[:, 2:4], head_vel_pred[:, 1:3], reduction='none')
+                    # will constrain x_{-3|0} ~ x_{2}
+                    loss_head_trans_accel = self.criterion(head_accel_pred[:, 1:], head_accel_pred[:, :-1], reduction='none')
 
             # Mask handling
             if end_idx is None:
-                mask = torch.ones((predicted_v.shape[0], data_cfg.MOTIONS), dtype=torch.bool, device=predicted_v.device)
+                mask = torch.ones((motion_pre.shape[0], data_cfg.MOTIONS), dtype=torch.bool, device=predicted_v.device)
             else:
-                mask = torch.arange(data_cfg.MOTIONS, device=predicted_v.device).expand(predicted_v.shape[0], -1) < end_idx.unsqueeze(1)
+                mask = torch.arange(data_cfg.MOTIONS, device=motion_pre.device).expand(motion_pre.shape[0], -1) < end_idx.unsqueeze(1)
 
             loss_dict['flow'] += (loss_flow[mask].mean() / 2)
+            loss_dict['vert'] += (loss_vert[mask].mean() / 2) if loss_vert is not None else 0.0
+            loss_dict['vel'] += (loss_vel[mask[:, 1:]].mean() / 2) if loss_vel is not None and torch.numel(loss_vel) > 0 else 0.0
+            loss_dict['smooth'] += (loss_smooth[mask[:, 2:]].mean() / 2) if loss_smooth is not None and torch.numel(loss_smooth) > 0 else 0.0
+            loss_dict['head_angle'] += (loss_head_angle[mask].mean() / 2) if loss_head_angle is not None else 0.0
+            loss_dict['head_vel'] += (loss_head_vel[mask[:, 1:]].mean() / 2) if loss_head_vel is not None and torch.numel(loss_head_vel) > 0 else 0.0
+            loss_dict['head_smooth'] += (loss_head_smooth[mask[:, 2:]].mean() / 2) if loss_head_smooth is not None and torch.numel(loss_head_smooth) > 0 else 0.0
+            
+            if clip_id != 0 and loss_cfg.HEAD.W_TRANS > 0:
+                vel_mask = mask[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 2]
+                accel_mask = mask[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 3]
+                loss_head_trans_vel = loss_head_trans_vel[vel_mask].mean()
+                loss_head_trans_accel = loss_head_trans_accel[accel_mask].mean()
+                loss_dict['head_smooth'] += (loss_head_trans_vel + loss_head_trans_accel)
 
         # Total loss
-        loss = loss_dict['flow']
+        loss = loss_dict['flow'] + \
+                loss_cfg.GEOMETRIC.W_VERTEX * loss_dict['vert'] + \
+                loss_cfg.GEOMETRIC.W_VELOCITY * loss_dict['vel'] + \
+                loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'] + \
+                loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'] + \
+                loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'] + \
+                loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'] + \
+                loss_cfg.HEAD.W_TRANS * loss_dict['head_trans']
+
+        loss_dict['total'] = loss
+        loss_dict['vert'] = (loss_cfg.GEOMETRIC.W_VERTEX * loss_dict['vert'])
+        loss_dict['vel'] = (loss_cfg.GEOMETRIC.W_VELOCITY * loss_dict['vel'])
+        loss_dict['smooth'] = (loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'])
+        loss_dict['head_angle'] = (loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'])
+        loss_dict['head_vel'] = (loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'])
+        loss_dict['head_smooth'] = (loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
+        loss_dict['head_trans'] = (loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
         loss_dict['total'] = loss
         
         self.model_backward_and_update(loss)
@@ -244,7 +318,7 @@ class FlowMatchingTrainer(TrainerBase):
         self.evaluator.reset()
 
         if split is None:
-            split = self.assistant.cfg.TEST.SPLIT
+            split = self.cfg.TEST.SPLIT
 
         if split == "val" and self.val_loader is not None:
             data_loader = self.val_loader
@@ -258,7 +332,7 @@ class FlowMatchingTrainer(TrainerBase):
         for test_round in range(n_rounds):
             for batch_idx, batch in enumerate(data_loader):
                 current_iter = test_round * len(data_loader) + batch_idx
-                data_cfg, loss_cfg = self.assistant.cfg.DATASET.HDTF_TFHP, self.assistant.cfg.LOSS
+                data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
                 name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
         
                 # Extract style features
@@ -270,48 +344,149 @@ class FlowMatchingTrainer(TrainerBase):
                 if data_cfg.USE_CONTEXT_AUDIO:
                     audio_feat = model.extract_audio_feature(torch.cat(audio_pair, dim=1), data_cfg.MOTIONS * 2)
 
-                loss_dict = {'flow': 0.0}
+                loss_dict = {'flow': 0.0, 'vert': 0.0, 'vel': 0.0, 'smooth': 0.0,
+                     'head_angle': 0.0, 'head_vel': 0.0, 'head_smooth': 0.0, 'head_trans': 0.0}
                 for clip_id in range(2):
                     audio = audio_pair[clip_id]
                     motion_coef = motion_coef_pair[clip_id]
                     style = style_pair[1 - clip_id] if style_pair else None
                     batch_size = audio.shape[0]
-                
-                    if data_cfg.USE_CONTEXT_AUDIO:
-                        audio_in = audio_feat[:, clip_id * data_cfg.MOTIONS:(clip_id + 1) * data_cfg.MOTIONS]
-                    else:
-                        audio_in = audio
-                    motion_coef_in = motion_coef
 
-                    indicator = torch.ones(batch_size, data_cfg.MOTIONS, device=self.device) \
-                        if self.assistant.cfg.MODEL.HEAD.USE_INDICATOR else None
+                    # Truncate input audio and motion according to trunc_prob
+                    if (clip_id == 0 and np.random.rand() < data_cfg.TRUNC_PROB1) or \
+                       (clip_id != 0 and np.random.rand() < data_cfg.TRUNC_PROB2):
+                        audio_in, motion_coef_in, end_idx = truncate_motion_coef_and_audio(
+                            audio, motion_coef, data_cfg.MOTIONS, self.dm.dataset.audio_unit, data_cfg.PAD_MODE
+                        )
+                        if data_cfg.USE_CONTEXT_AUDIO and clip_id != 0:
+                            audio_in = model.extract_audio_feature(
+                                torch.cat([audio_pair[clip_id - 1], audio_in], dim=1), data_cfg.MOTIONS * 2
+                            )[:, -data_cfg.MOTIONS:]
+                    else:
+                        if data_cfg.USE_CONTEXT_AUDIO:
+                            audio_in = audio_feat[:, clip_id * data_cfg.MOTIONS:(clip_id + 1) * data_cfg.MOTIONS]
+                        else:
+                            audio_in = audio
+                        motion_coef_in, end_idx = motion_coef, None
+
+                    # Prepare indicator if needed
+                    if self.cfg.MODEL.HEAD.USE_INDICATOR:
+                        if end_idx is not None:
+                            indicator = torch.arange(data_cfg.MOTIONS, device=self.device).expand(batch_size, -1) < end_idx.unsqueeze(1)
+                        else:
+                            indicator = torch.ones(batch_size, data_cfg.MOTIONS, device=self.device)
+                    else:
+                        indicator = None
 
                     if clip_id == 0:
-                        predicted_v, target_v, prev_motion_coef, prev_audio_feat = self.model(
+                        predicted_v, target_v, motion_pre, prev_motion_coef, prev_audio_feat = self.model(
                             motion_coef_in, audio_in, shape_coef, style, indicator=indicator
                         )
-                        prev_motion_coef = prev_motion_coef[:, -data_cfg.N_PREV_MOTIONS:]
-                        prev_audio_feat = prev_audio_feat[:, -data_cfg.N_PREV_MOTIONS:]
+                        if end_idx is not None:
+                            prev_motion_coef = motion_coef[:, -data_cfg.N_PREV_MOTIONS:]
+                            if data_cfg.USE_CONTEXT_AUDIO:
+                                prev_audio_feat = audio_feat[:, data_cfg.MOTIONS - data_cfg.N_PREV_MOTIONS:data_cfg.MOTIONS].detach()
+                            else:
+                                with torch.no_grad():
+                                    prev_audio_feat = model.extract_audio_feature(audio)[:, -data_cfg.N_PREV_MOTIONS:]
+                        else:
+                            prev_motion_coef = prev_motion_coef[:, -data_cfg.N_PREV_MOTIONS:]
+                            prev_audio_feat = prev_audio_feat[:, -data_cfg.N_PREV_MOTIONS:]
                     else:
-                        predicted_v, target_v, _, _ = self.model(
+                        predicted_v, target_v, motion_pre, _, _ = self.model(
                             motion_coef_in, audio_in, shape_coef, style,
                             prev_motion_coef, prev_audio_feat, indicator=indicator
                         )
 
-                    loss_flow = self.criterion(predicted_v, target_v[:, data_cfg.N_PREV_MOTIONS:], reduction='none')
-                    loss_dict['flow'] += (loss_flow.mean() / 2)
+                    loss_flow = self.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
+                    motion_coef_gt = torch.cat([prev_motion_coef, motion_coef_in], dim=1) if clip_id != 0 else motion_coef_in
+                    coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
+                                        rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+                    coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
+                                        rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
+                    
+                    verts_gt, _, _ = self.flame(coef_gt['shape'].view(-1, 100), coef_gt['exp'].view(-1, 50),
+                                            coef_gt['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
+                    verts_pred, _, _ = self.flame(coef_pred['shape'].view(-1, 100), coef_pred['exp'].view(-1, 50),
+                                                coef_pred['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
+                    
+                    seq_len = motion_pre.shape[1]
+                    verts_gt, verts_pred = verts_gt.view(-1, seq_len, 5023, 3), verts_pred.view(-1, seq_len, 5023, 3)
+                    loss_vert = self.criterion(verts_gt, verts_pred, reduction='none') if loss_cfg.GEOMETRIC.W_VERTEX > 0 else None
 
-                loss = loss_dict['flow']
+                    vel_gt, vel_pred = verts_gt[:, 1:] - verts_gt[:, :-1], verts_pred[:, 1:] - verts_pred[:, :-1]
+                    loss_vel = self.criterion(vel_gt, vel_pred, reduction='none') if loss_cfg.GEOMETRIC.W_VELOCITY > 0 else None
+
+                    vel_pred = verts_pred[:, 1:] - verts_pred[:, :-1]
+                    loss_smooth = self.criterion(vel_pred[:, 1:], vel_pred[:, :-1], reduction='none') if loss_cfg.GEOMETRIC.W_SMOOTH > 0 else None
+
+                    if not self.cfg.MODEL.HEAD.NO_HEAD_POSE:
+                        head_pose_gt = motion_coef_gt[:, :, 50:53]
+                        head_pose_pred = motion_pre[:, :, 50:53]
+
+                        loss_head_angle = self.criterion(head_pose_gt, head_pose_pred, reduction='none') if loss_cfg.HEAD.W_ANGLE > 0 else None
+
+                        head_vel_gt, head_vel_pred = head_pose_gt[:, 1:] - head_pose_gt[:, :-1], head_pose_pred[:, 1:] - head_pose_pred[:, :-1]
+                        loss_head_vel = self.criterion(head_vel_gt, head_vel_pred, reduction='none') if loss_cfg.HEAD.W_VELOCITY > 0 else None
+                        
+                        head_vel_pred = head_pose_pred[:, 1:] - head_pose_pred[:, :-1]
+                        loss_head_smooth = self.criterion(head_vel_pred[:, 1:], head_vel_pred[:, :-1], reduction='none') if loss_cfg.HEAD.W_SMOOTH > 0 else None
+
+                        if clip_id != 0 and loss_cfg.HEAD.W_TRANS > 0:
+                            head_pose_trans = torch.cat([head_pose_gt[:, data_cfg.N_PREV_MOTIONS - 3:data_cfg.N_PREV_MOTIONS],
+                                                        head_pose_pred[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 3]], dim=1)
+                            head_vel_pred = head_pose_trans[:, 1:] - head_pose_trans[:, :-1]
+                            head_accel_pred = head_vel_pred[:, 1:] - head_vel_pred[:, :-1]
+
+                            loss_head_trans_vel = self.criterion(head_vel_pred[:, 2:4], head_vel_pred[:, 1:3], reduction='none')
+                            loss_head_trans_accel = self.criterion(head_accel_pred[:, 1:], head_accel_pred[:, :-1], reduction='none')
+
+                    if end_idx is None:
+                        mask = torch.ones((motion_pre.shape[0], data_cfg.MOTIONS), dtype=torch.bool, device=predicted_v.device)
+                    else:
+                        mask = torch.arange(data_cfg.MOTIONS, device=motion_pre.device).expand(motion_pre.shape[0], -1) < end_idx.unsqueeze(1)
+
+                    loss_dict['flow'] += (loss_flow[mask].mean() / 2)
+                    loss_dict['vert'] += (loss_vert[mask].mean() / 2) if loss_vert is not None else 0.0
+                    loss_dict['vel'] += (loss_vel[mask[:, 1:]].mean() / 2) if loss_vel is not None and torch.numel(loss_vel) > 0 else 0.0
+                    loss_dict['smooth'] += (loss_smooth[mask[:, 2:]].mean() / 2) if loss_smooth is not None and torch.numel(loss_smooth) > 0 else 0.0
+                    loss_dict['head_angle'] += (loss_head_angle[mask].mean() / 2) if loss_head_angle is not None else 0.0
+                    loss_dict['head_vel'] += (loss_head_vel[mask[:, 1:]].mean() / 2) if loss_head_vel is not None and torch.numel(loss_head_vel) > 0 else 0.0
+                    loss_dict['head_smooth'] += (loss_head_smooth[mask[:, 2:]].mean() / 2) if loss_head_smooth is not None and torch.numel(loss_head_smooth) > 0 else 0.0
+
+                    if clip_id != 0 and loss_cfg.HEAD.W_TRANS > 0:
+                        vel_mask = mask[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 2]
+                        accel_mask = mask[:, data_cfg.N_PREV_MOTIONS:data_cfg.N_PREV_MOTIONS + 3]
+                        loss_head_trans_vel = loss_head_trans_vel[vel_mask].mean()
+                        loss_head_trans_accel = loss_head_trans_accel[accel_mask].mean()
+                        loss_dict['head_smooth'] += (loss_head_trans_vel + loss_head_trans_accel)
+
+                loss = loss_dict['flow'] + \
+                        loss_cfg.GEOMETRIC.W_VERTEX * loss_dict['vert'] + \
+                        loss_cfg.GEOMETRIC.W_VELOCITY * loss_dict['vel'] + \
+                        loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'] + \
+                        loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'] + \
+                        loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'] + \
+                        loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'] + \
+                        loss_cfg.HEAD.W_TRANS * loss_dict['head_trans']
+
                 loss_meter['total'].update(loss.item())
                 loss_meter['flow'].update(loss_dict['flow'].item())
+                loss_meter['vert'].update(loss_cfg.GEOMETRIC.W_VERTEX * loss_dict['vert'])
+                loss_meter['vel'].update(loss_cfg.GEOMETRIC.W_VELOCITY * loss_dict['vel'])
+                loss_meter['smooth'].update(loss_cfg.GEOMETRIC.W_SMOOTH * loss_dict['smooth'])
+                loss_meter['head_angle'].update(loss_cfg.HEAD.W_ANGLE * loss_dict['head_angle'])
+                loss_meter['head_vel'].update(loss_cfg.HEAD.W_VELOCITY * loss_dict['head_vel'])
+                loss_meter['head_smooth'].update(loss_cfg.HEAD.W_SMOOTH * loss_dict['head_smooth'])
+                loss_meter['head_trans'].update(loss_cfg.HEAD.W_TRANS * loss_dict['head_trans'])
 
-                if (current_iter + 1) % self.assistant.cfg.TRAIN.PRINT_FREQ == 0:
+                if (current_iter + 1) % self.cfg.TRAIN.PRINT_FREQ == 0:
                     loss_info = ' '.join([f'loss_{item} {loss.avg:.4f}' for item, loss in loss_meter.items()])
                     logger.info(f'iter: {current_iter + 1} {loss_info}')
                     
                 for item, loss in loss_meter.items():
-                    if self.assistant.cfg.ENV.USE_WANDB:
-                        self.assistant.wandb_run.log({f"val/loss_{item}": loss.avg})
+                    if self.cfg.ENV.USE_WANDB:
+                        self.wandb_run.log({f"val/loss_{item}": loss.avg})
                     self.write_scalar(f"val/loss_{item}", loss.avg, current_iter)
 
     def parse_batch(self, batch):

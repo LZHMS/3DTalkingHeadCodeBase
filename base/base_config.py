@@ -8,17 +8,18 @@ from yacs.config import CfgNode as CN
 import logging
 logger: logging.Logger
 
+
 class BaseConfig:
-  def __init__(self, new_allowed=True):
+  def __init__(self):
     ###########################
     # Config definition
     ###########################
-    cfg = CN(new_allowed=new_allowed)
+    cfg = CN(new_allowed=True)
 
     ###########################
     # Env
     ###########################
-    cfg.ENV = CN()
+    cfg.ENV = CN(new_allowed=True)
     cfg.ENV.VERSION = 1
     cfg.ENV.SEED = -1
     # Directory to save the output files (like log.txt and model weights)
@@ -34,6 +35,18 @@ class BaseConfig:
     cfg.ENV.NAME = ""
     cfg.ENV.DESCRIPTION = ""
     cfg.ENV.USE_WANDB = False
+    # Container for arbitrary runtime/env-specific options
+    cfg.ENV.EXTRA = CN(new_allowed=True)
+    
+    cfg.ENV.USE_WANDB = True
+    cfg.ENV.WANDB = CN()
+    cfg.ENV.WANDB.KEY = None
+    cfg.ENV.WANDB.ENTITY = "3DVZHao"
+    cfg.ENV.WANDB.PROJECT = "FLowTalker"
+    cfg.ENV.WANDB.NAME = "TrainingModel"
+    cfg.ENV.WANDB.NOTES = "Training as baseline."
+    cfg.ENV.WANDB.TAGS = "Baseline"
+    cfg.ENV.WANDB.MODE = "online"
 
     ###########################
     # Input
@@ -55,7 +68,6 @@ class BaseConfig:
     # Directory where datasets are stored
     cfg.DATASET.NAME = ""
     cfg.DATASET.ROOT = ""
-    cfg.DATASET.SPLIT = ""    # split file of train, val, test
 
     # for vocaset
     cfg.DATASET.VOCASET = CN()
@@ -102,6 +114,14 @@ class BaseConfig:
     # Setting for the test data-loader
     cfg.DATALOADER.TEST = CN()
     cfg.DATALOADER.TEST.BATCH_SIZE = 32
+
+
+    ###########################
+    # FLAME
+    ###########################
+    cfg.TDMM = CN()     # 3DMM model
+    cfg.TDMM.FLAME = CN()
+    cfg.TDMM.FLAME.ROOT = "pretrained/FLAME"
 
     ###########################
     # Model
@@ -168,6 +188,15 @@ class BaseConfig:
     cfg.MODEL.TAIL.NUM_HIDDEN_LAYERS = 4
     cfg.MODEL.TAIL.MLP_RATIO = 4
     cfg.MODEL.TAIL.TYARGET = "sample"  # for diffusion model, either "sample" or "noise"
+
+    cfg.ALGORITHM = CN()
+    cfg.ALGORITHM.FLOWMATCHING = CN()
+    cfg.ALGORITHM.FLOWMATCHING.MIN_SIGMA = 0.0
+    cfg.ALGORITHM.FLOWMATCHING.INFERENCE_MODE = 'euler'  # 'euler' or 'adaptive' for ODE solving         # Minimum sigma for numerical stability
+    cfg.ALGORITHM.FLOWMATCHING.NUM_STEPS = 25            # Number of Euler steps for sampling
+    cfg.ALGORITHM.FLOWMATCHING.REVERSE_FLOW = True       # Use reverse flow (x1->x0)
+    cfg.ALGORITHM.FLOWMATCHING.LOG_NORMAL_MEAN = 0.0     # Log-normal sampling mean for time
+    cfg.ALGORITHM.FLOWMATCHING.LOG_NORMAL_STD = 1.0      # Log-normal sampling std for time
 
     ###########################
     # Optimization
@@ -293,43 +322,22 @@ class BaseConfig:
     # OP
     self.cfg = cfg
 
-  def system_init(self):
-    # System Initialization
     ## logger configuration
     self.setup_logger()
     logger.info("Initializing main logger ...")
 
-    ## random seed setting
-    if self.cfg.ENV.SEED >= 0:
-      logger.info('Setting fixed seed: {}'.format(self.cfg.ENV.SEED))
-      self.set_random_seed(self.cfg.ENV.SEED)
-
-    ## cuda setting
-    if torch.cuda.is_available() and self.cfg.ENV.USE_CUDA:
-      torch.backends.cudnn.benchmark = True
-      self.device = torch.device(f"cuda:{self.cfg.ENV.GPU[0]}")
-    else:
-      self.device = torch.device("cpu")
-      logger.info('Setting device to {}'.format(self.device))
-  
   def setup_logger(self, logger_name="MainLogger"):
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.INFO)
-    if not logger.handlers:
-      handler = logging.StreamHandler()
-      datefmt = "%Y-%m-%d %H:%M:%S"
-      fmt = "[%(asctime)s %(filename)s line %(lineno)d]=>%(levelname)s: %(message)s"
-      formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
-      handler.setFormatter(formatter)
-      logger.addHandler(handler)
+      logger = logging.getLogger(logger_name)
+      logger.setLevel(logging.INFO)
+      if not logger.handlers:
+        handler = logging.StreamHandler()
+        datefmt = "%Y-%m-%d %H:%M:%S"
+        fmt = "[%(asctime)s %(filename)s line %(lineno)d]=>%(levelname)s: %(message)s"
+        formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
-    builtins.logger = logger
-
-  def set_random_seed(self, seed):
-      random.seed(seed)
-      np.random.seed(seed)
-      torch.manual_seed(seed)
-      torch.cuda.manual_seed_all(seed)
+      builtins.logger = logger
 
   def collect_env_info(self):
     """Return env info as a string.

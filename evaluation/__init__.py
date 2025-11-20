@@ -1,1 +1,1 @@
-from .CodeTalkerEvaluator import CodeTalkerEvaluator
+from .TalkerEvaluator import TalkerEvaluator

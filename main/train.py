@@ -1,40 +1,27 @@
 import argparse
-
-from base import build_trainer
-from config import CodeTalkerConfig, TrainerConfig
-from trainers import StyleEncoderTrainer
 import warnings
 warnings.filterwarnings('ignore')
-import wandb
 
-def merge_args(assistant, args):
+from base import BaseConfig, build_trainer
+from trainers import StyleEncoderTrainer, DiffPoseTalkTrainer, FlowMatchingTrainer
+
+def merge_args(base_cfg, args):
     if args.gpu:
-        assistant.cfg.ENV.GPU = args.gpu
-
-    if args.use_wandb:
-        assistant.cfg.ENV.USE_WANDB = args.use_wandb
+        base_cfg.cfg.ENV.GPU = args.gpu
 
 def main(args):
-    assistant = TrainerConfig(args.config_file)
+    base_cfg = BaseConfig()
+    base_cfg.cfg.merge_from_file(args.config_file)
+
     # From command line arguments
-    merge_args(assistant, args)
+    merge_args(base_cfg, args)
     # From optional input arguments
-    assistant.cfg.merge_from_list(args.opts)
-    
-    assistant.cfg.freeze()
-    assistant.print_info()
+    base_cfg.cfg.merge_from_list(args.opts)
+    # frozen the trainer config
+    base_cfg.cfg.freeze()
+    base_cfg.print_info()
 
-    # setup wandb
-    if args.use_wandb:
-        extra_config = {"NTXent_Temperature": assistant.cfg.LOSS.CONTRASTIVE.TEMPRATURE}
-        assistant.setup_wandb(name=args.wandb_name,
-                            notes=args.wandb_notes,
-                            tags=args.wandb_tags.split(','),
-                            extra_config=extra_config,
-                            dir='output',
-                            mode=args.wandb_mode)
-
-    trainer = build_trainer(assistant)
+    trainer = build_trainer(base_cfg.cfg)
     if args.eval_only:
         trainer.load_model(args.model_dir, epoch=args.load_epoch)
         trainer.test()
@@ -56,23 +43,6 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--eval-only', action='store_true', help='wether to train model'
-    )
-
-    # wandb config
-    parser.add_argument(
-        '--use-wandb', action='store_true', help='wether to use wandb for logging'
-    )
-    parser.add_argument(
-        '--wandb-name', type=str, default='TrainingModel', help='the name of experinment'
-    )
-    parser.add_argument(
-        '--wandb-notes', type=str, default='First Stage', help='the noting about the experinment'
-    )
-    parser.add_argument(
-        '--wandb-tags', type=str, default="Codebase,Baseline", help='the tags about the experinment'
-    )
-    parser.add_argument(
-        '--wandb-mode', type=str, default="online", help='the mode of wandb (online/offline)'
     )
     parser.add_argument('--debug', action='store_true', help='wether do debugging')
     parser.add_argument(

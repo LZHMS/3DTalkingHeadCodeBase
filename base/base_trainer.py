@@ -2,7 +2,9 @@ import time
 import datetime
 import shutil
 import pickle
+import random
 import numpy as np
+import os
 import os.path as osp
 from functools import partial
 from collections import OrderedDict, defaultdict
@@ -20,17 +22,17 @@ logger: logging.Logger
 
 TRAINER_REGISTRY = Registry("TRAINER")
 
-def build_trainer(assistant):
+def build_trainer(cfg):
     avai_trainers = TRAINER_REGISTRY.registered_names()
-    check_availability(assistant.cfg.TRAINER.NAME, avai_trainers)
-    if assistant.cfg.ENV.VERBOSE:
-        logger.info("Loading trainer: {}".format(assistant.cfg.TRAINER.NAME))
-    return TRAINER_REGISTRY.get(assistant.cfg.TRAINER.NAME)(assistant)
+    check_availability(cfg.TRAINER.NAME, avai_trainers)
+    if cfg.ENV.VERBOSE:
+        logger.info("Loading trainer: {}".format(cfg.TRAINER.NAME))
+    return TRAINER_REGISTRY.get(cfg.TRAINER.NAME)(cfg)
 
 class TrainerBase:
     """Base class for iterative trainer."""
 
-    def __init__(self, assistant):
+    def __init__(self, cfg):
         self._models = OrderedDict()
         self._optims = OrderedDict()
         self._scheds = OrderedDict()
@@ -39,18 +41,50 @@ class TrainerBase:
         self.best_result = -np.inf
 
         # Save as attributes some frequently used variables
-        self.use_iters = assistant.cfg.TRAIN.USE_ITERS
+        self.use_iters = cfg.TRAIN.USE_ITERS
         if self.use_iters:
-            self.iter, self.max_iters = 0, assistant.cfg.TRAIN.MAX_ITERS
+            self.iter, self.max_iters = 0, cfg.TRAIN.MAX_ITERS
         else:
-            self.epoch, self.start_epoch = 0, assistant.cfg.TRAIN.START_EPOCH
-            self.max_epoch = assistant.cfg.TRAIN.MAX_EPOCHS
+            self.epoch, self.start_epoch = 0, cfg.TRAIN.START_EPOCH
+            self.max_epoch = cfg.TRAIN.MAX_EPOCHS
         
-        self.output_dir = assistant.cfg.ENV.OUTPUT_DIR
-        self.assistant = assistant
+        self.output_dir = cfg.ENV.OUTPUT_DIR
+        self.cfg = cfg
 
-        self.check_cfg(assistant.cfg)
-        self.device = assistant.device
+        self.check_cfg(cfg)
+        self.system_init()
+
+    def system_init(self):
+        # System Initialization
+        ## random seed setting
+        if self.cfg.ENV.SEED >= 0:
+          logger.info('Setting fixed seed: {}'.format(self.cfg.ENV.SEED))
+          random.seed(self.cfg.ENV.SEED)
+          np.random.seed(self.cfg.ENV.SEED)
+          torch.manual_seed(self.cfg.ENV.SEED)
+          torch.cuda.manual_seed_all(self.cfg.ENV.SEED)
+
+        ## cuda setting
+        if torch.cuda.is_available() and self.cfg.ENV.USE_CUDA:
+          torch.backends.cudnn.benchmark = True
+          gpu_ids = self.cfg.ENV.GPU
+          if not gpu_ids:
+            raise ValueError("ENV.GPU must contain at least one gpu id when USE_CUDA=True")
+
+          target_gpu = gpu_ids[0]
+          if len(gpu_ids) > 1 and torch.distributed.is_available():
+            # assume torchrun/launch supplies LOCAL_RANK; fallback to rank % len(gpu_ids)
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            if torch.distributed.is_initialized():
+              local_rank = torch.distributed.get_rank() % len(gpu_ids)
+            target_gpu = gpu_ids[local_rank % len(gpu_ids)]
+
+          self.device = torch.device(f"cuda:{target_gpu}")
+          torch.cuda.set_device(self.device)
+        else:
+          self.device = torch.device("cpu")
+          logger.info('Setting device to {}'.format(self.device))
+
 
     def check_cfg(self, cfg):
         """Check whether some variables are set correctly for
@@ -113,14 +147,50 @@ class TrainerBase:
             > close_writer
             > write_scalar
     """
-    def init_writer(self, log_dir):
+    def init_writer(self, log_dir, extra_config=None):
         if self.__dict__.get("_writer") is None or self._writer is None:
-            logger.info(f"Initialize tensorboard (log_dir={log_dir})")
-            self._writer = SummaryWriter(log_dir=log_dir)
+            writer_dir = osp.join(self.output_dir, "tensorboard")
+            mkdir_if_missing(writer_dir)
+            logger.info(f"Initialize tensorboard (log_dir={writer_dir})")
+            self._writer = SummaryWriter(log_dir=writer_dir)
+
+        # Start a new wandb run to track this script.
+        if self.cfg.ENV.USE_WANDB:
+            import wandb
+            wandb.login(key=self.cfg.ENV.WANDB.KEY)
+            config = {"batch_size": self.cfg.DATALOADER.TRAIN.BATCH_SIZE,
+                    "learning_rate": self.cfg.OPTIM.LR}
+            if self.cfg.TRAIN.USE_ITERS:
+                config["iters"] = self.cfg.TRAIN.MAX_ITERS
+            else:
+                config["epochs"] = self.cfg.TRAIN.MAX_EPOCHS
+            if extra_config:
+                config.update(extra_config)
+
+            wandb_dir = osp.join(self.output_dir, "wandb")
+            mkdir_if_missing(wandb_dir)
+            logger.info(f"Initialize wandb (log_dir={wandb_dir})")
+            self.wandb_run = wandb.init(
+                name=self.cfg.ENV.WANDB.NAME,
+                # Set the wandb entity where your project will be logged (generally your team name).
+                entity=self.cfg.ENV.WANDB.ENTITY,
+                # Set the wandb project where this run will be logged.
+                project=self.cfg.ENV.WANDB.PROJECT,
+                # Track hyperparameters and run metadata.
+                config=config,
+                notes=self.cfg.ENV.WANDB.NOTES,
+                tags=self.cfg.ENV.WANDB.TAGS,
+                dir=wandb_dir,
+                mode=self.cfg.ENV.WANDB.MODE
+            )
 
     def close_writer(self):
         if self._writer is not None:
             self._writer.close()
+        if self.cfg.ENV.USE_WANDB:
+            # Finish the run and upload any remaining data.
+            self.wandb_run.finish()
+            
 
     def write_scalar(self, tag, scalar_value, global_step=None):
         if self._writer is None:
@@ -161,14 +231,12 @@ class TrainerBase:
 
     def before_train(self):
         directory = self.output_dir
-        if self.assistant.cfg.ENV.RESUME:
-            directory = self.assistant.cfg.ENV.RESUME
+        if self.cfg.ENV.RESUME:
+            directory = self.cfg.ENV.RESUME
         self.start_epoch = self.resume_model_if_exist(directory)
 
         # Initialize summary writer
-        writer_dir = osp.join(self.output_dir, "tensorboard")
-        mkdir_if_missing(writer_dir)
-        self.init_writer(writer_dir)
+        self.init_writer(self.output_dir)
 
         # Remember the starting time (for computing the elapsed time)
         self.time_start = time.time()
@@ -176,9 +244,9 @@ class TrainerBase:
     def after_train(self):
         logger.info("Finish training!")
 
-        do_test = not self.assistant.cfg.TEST.NO_TEST
+        do_test = not self.cfg.TEST.NO_TEST
         if do_test:
-            if self.assistant.cfg.TEST.FINAL_MODEL == "best_val":
+            if self.cfg.TEST.FINAL_MODEL == "best_val":
                 logger.info("Deploy the model with the best val performance")
                 self.load_model(self.output_dir)
             else:
@@ -193,19 +261,15 @@ class TrainerBase:
         # Close writer
         self.close_writer()
 
-        # Finish the run and upload any remaining data.
-        if self.assistant.cfg.ENV.USE_WANDB:
-            self.assistant.wandb_run.finish()
-
     def before_epoch(self):
         pass
 
     def after_epoch(self):
         last_epoch = (self.epoch + 1) == self.max_epoch
-        do_test = not self.assistant.cfg.TEST.NO_TEST
+        do_test = not self.cfg.TEST.NO_TEST
         meet_checkpoint_freq = (
-            (self.epoch + 1) % self.assistant.cfg.TRAIN.CHECKPOINT_FREQ == 0
-            if self.assistant.cfg.TRAIN.CHECKPOINT_FREQ > 0 else False
+            (self.epoch + 1) % self.cfg.TRAIN.CHECKPOINT_FREQ == 0
+            if self.cfg.TRAIN.CHECKPOINT_FREQ > 0 else False
         )
 
         if do_test:
@@ -321,18 +385,18 @@ class TrainerBase:
             param_groups: If provided, directly optimize param_groups and abandon model
         """
         AVAI_OPTIMS = ["adam", "amsgrad", "sgd", "rmsprop", "radam", "adamw"]
-        optim = self.assistant.cfg.OPTIM.NAME
-        lr = self.assistant.cfg.OPTIM.LR
-        weight_decay = self.assistant.cfg.OPTIM.WEIGHT_DECAY
-        momentum = self.assistant.cfg.OPTIM.MOMENTUM
-        sgd_dampening = self.assistant.cfg.OPTIM.SGD_DAMPNING
-        sgd_nesterov = self.assistant.cfg.OPTIM.SGD_NESTEROV
-        rmsprop_alpha = self.assistant.cfg.OPTIM.RMSPROP_ALPHA
-        adam_beta1 = self.assistant.cfg.OPTIM.ADAM_BETA1
-        adam_beta2 = self.assistant.cfg.OPTIM.ADAM_BETA2
-        staged_lr = self.assistant.cfg.OPTIM.STAGED_LR
-        new_layers = self.assistant.cfg.OPTIM.NEW_LAYERS
-        base_lr_mult = self.assistant.cfg.OPTIM.LR_SCHEDULER
+        optim = self.cfg.OPTIM.NAME
+        lr = self.cfg.OPTIM.LR
+        weight_decay = self.cfg.OPTIM.WEIGHT_DECAY
+        momentum = self.cfg.OPTIM.MOMENTUM
+        sgd_dampening = self.cfg.OPTIM.SGD_DAMPNING
+        sgd_nesterov = self.cfg.OPTIM.SGD_NESTEROV
+        rmsprop_alpha = self.cfg.OPTIM.RMSPROP_ALPHA
+        adam_beta1 = self.cfg.OPTIM.ADAM_BETA1
+        adam_beta2 = self.cfg.OPTIM.ADAM_BETA2
+        staged_lr = self.cfg.OPTIM.STAGED_LR
+        new_layers = self.cfg.OPTIM.NEW_LAYERS
+        base_lr_mult = self.cfg.OPTIM.LR_SCHEDULER
 
         if optim not in AVAI_OPTIMS:
             raise ValueError(
@@ -453,13 +517,13 @@ class TrainerBase:
         """
         AVAI_SCHEDS = ["single_step", "multi_step", "cosine", "gradual", "gradualThenDecay"]
 
-        optim_cfg = self.assistant.cfg.OPTIM
+        optim_cfg = self.cfg.OPTIM
         lr_scheduler = optim_cfg.LR_SCHEDULER
         step_size = optim_cfg.STEP_SIZE
         gamma = optim_cfg.GAMMA
         max_step = self.max_epoch if not self.use_iters else self.max_iters
         warmup_step = optim_cfg.WARMUP_EPOCHS if not self.use_iters else optim_cfg.WARMUP_ITERS
-        training_step = self.assistant.cfg.TRAIN.MAX_EPOCHS if not self.use_iters else self.assistant.cfg.TRAIN.MAX_ITERS
+        training_step = self.cfg.TRAIN.MAX_EPOCHS if not self.use_iters else self.cfg.TRAIN.MAX_ITERS
 
         if lr_scheduler not in AVAI_SCHEDS:
             raise ValueError(
@@ -559,7 +623,7 @@ class TrainerBase:
             self.save_checkpoint(
                 {
                     "state_dict": model_dict,
-                    "model_config": self.assistant.cfg.MODEL,
+                    "model_config": self.cfg.MODEL,
                     f"{step_info}": step + 1,
                     "optimizer": optim_dict,
                     "scheduler": sched_dict,

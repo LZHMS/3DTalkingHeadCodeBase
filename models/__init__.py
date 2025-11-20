@@ -7,4 +7,4 @@ from .DiffPoseTalk.DiffTalkingHead import DiffTalkingHead
 from .FlowMatching.FlowMatchingHead import FlowMatchingHead
 from .FlowMatching.flow_matching import FlowMatching
 
-from .Avatar.flame import FLAME, FLAMEConfig
+from .Avatar.flame import FLAME, build_flame_config

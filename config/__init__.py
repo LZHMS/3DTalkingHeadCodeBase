@@ -1,2 +1,0 @@
-from .codetalker.codetalker_config import CodeTalkerConfig
-from .trainer_config import TrainerConfig

@@ -20,7 +20,7 @@ class FlowMatchingHead(nn.Module):
         super().__init__()
 
         # Model parameters
-        self.use_style = True if cfg.ADD.STYLE_ENC_CKPT else False
+        self.use_style = True if cfg.ENV.EXTRA.STYLE_ENC_CKPT else False
         self.motion_feat_dim = 50
         if cfg.MODEL.HEAD.ROT_REPR == 'aa':
             self.motion_feat_dim += 1 if cfg.MODEL.HEAD.NO_HEAD_POSE else 4
@@ -59,10 +59,10 @@ class FlowMatchingHead(nn.Module):
 
         # Flow Matching components
         self.flow_matching = FlowMatching(
-            min_sigma=cfg.MODEL.BACKBONE.get('MIN_SIGMA', 0.0),
-            inference_mode=cfg.MODEL.BACKBONE.get('INFERENCE_MODE', 'euler'),
-            num_steps=cfg.MODEL.BACKBONE.get('NUM_STEPS', 25),
-            reverse_flow=cfg.MODEL.BACKBONE.get('REVERSE_FLOW', True)
+            min_sigma=cfg.ALGORITHM.FLOWMATCHING.get('MIN_SIGMA', 0.0),
+            inference_mode=cfg.ALGORITHM.FLOWMATCHING.get('INFERENCE_MODE', 'euler'),
+            num_steps=cfg.ALGORITHM.FLOWMATCHING.get('NUM_STEPS', 25),
+            reverse_flow=cfg.ALGORITHM.FLOWMATCHING.get('REVERSE_FLOW', True)
         )
         
         # Flow denoising network (similar to diffusion denoising network but for flow)
@@ -175,7 +175,28 @@ class FlowMatchingHead(nn.Module):
         predicted_v = self.flow_net(xt, audio_feat, person_feat,
                                     prev_motion_feat, prev_audio_feat, time_step, indicator)
 
-        return predicted_v, target_v, motion_feat.detach(), audio_feat_saved.detach()
+        # Predict motion samples by integrating the learned flow from noise to data
+        with torch.no_grad():
+            prev_len = prev_motion_feat.shape[1]
+            static_prev_motion = prev_motion_feat.detach()
+            ode_init = torch.cat([static_prev_motion, x0.detach()], dim=1)
+
+            def ode_func(t, x):
+                if not torch.is_tensor(t):
+                    t_tensor = torch.tensor(t, device=x.device, dtype=x.dtype)
+                else:
+                    t_tensor = t.to(device=x.device, dtype=x.dtype)
+                t_batch = t_tensor.expand(x0.shape[0])
+
+                # Enforce static history and extract current segment
+                current_motion = x[:, prev_len:]
+                flow_full = self.flow_net(current_motion, audio_feat, person_feat,
+                                          static_prev_motion, prev_audio_feat, t_batch, indicator)
+                return flow_full
+
+            motion_pre = self.flow_matching.to_data(ode_func, ode_init)
+
+        return predicted_v, target_v, motion_pre, motion_feat.detach(), audio_feat_saved.detach()
 
     def _log_normal_sample(self, batch_size, device):
         """Sample time steps from log-normal distribution."""

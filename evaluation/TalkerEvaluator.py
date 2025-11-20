@@ -7,13 +7,12 @@ from sklearn.metrics import f1_score, confusion_matrix
 from base import EVALUATOR_REGISTRY, EvaluatorBase
 
 @EVALUATOR_REGISTRY.register()
-class CodeTalkerEvaluator(EvaluatorBase):
+class TalkerEvaluator(EvaluatorBase):
     """Evaluator for talking head generation."""
 
-    def __init__(self, assistant):
-        super().__init__(assistant)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self._total = 0
-        self.assistant = assistant
 
     def reset(self):
         self._correct = 0
