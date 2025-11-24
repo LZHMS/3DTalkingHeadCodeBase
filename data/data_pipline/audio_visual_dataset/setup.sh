@@ -4,10 +4,10 @@ export http_proxy="http://127.0.0.1:7890"
 export https_proxy="http://127.0.0.1:7890"
 
 # step 1: merge the collected txt files into one json file
-#python data_explore.py --mode build-json --data-dir json/source_txt --output-dir json
+python data_explore.py --mode build-json --data-dir json/source_txt --output-dir json
 #python data_explore.py --mode convert-av1 --data-dir output
 #python data_explore.py --mode analyze --data-dir TalkScene
-python data_explore.py --mode analyze --data-dir TalkScene
+#python data_explore.py --mode analyze --data-dir TalkScene
 #python data_explore.py --mode merge --data-dir output_clips
 
 # step 2: download the video clips listed in the merged json file
