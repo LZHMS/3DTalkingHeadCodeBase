@@ -319,6 +319,13 @@ class BaseConfig:
     # is unavailable, test data will be used)
     cfg.TEST.FINAL_MODEL = "last_step"
 
+    cfg.EVALUATE = CN()
+    cfg.EVALUATE.LOAD_RENDER = False
+    cfg.EVALUATE.MESH_RENDER = "PyMeshRenderer"
+    cfg.EVALUATE.REND_SIZE = (640, 640)
+    cfg.EVALUATE.BLACK_BG = False
+    cfg.EVALUATE.PYOPENGL_PLATFORM = "osmesa"  # 'osmesa' or 'egl'
+
     # OP
     self.cfg = cfg
 

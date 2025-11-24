@@ -46,7 +46,7 @@ class FlowMatchingTrainer(TrainerBase):
         # Build components of trainer
         self.build_data_loader()
         self.build_model()
-        self.evaluator = build_evaluator(cfg)
+        self.evaluator = build_evaluator(cfg, self.flame, self.device)
         self.criterion = self.build_loss_metrics(self.cfg.LOSS.NAME)
 
     def build_data_loader(self):
@@ -314,7 +314,6 @@ class FlowMatchingTrainer(TrainerBase):
     def test(self, split=None, n_rounds=1):
         """A generic testing pipeline."""
         self.set_model_mode("eval")
-        self.evaluator.reset()
 
         if split is None:
             split = self.cfg.TEST.SPLIT
@@ -489,6 +488,28 @@ class FlowMatchingTrainer(TrainerBase):
                     if self.cfg.ENV.USE_WANDB:
                         self.wandb_run.log({f"val/loss_{item}": loss.avg})
                     self.write_scalar(f"val/loss_{item}", loss.avg, current_iter)
+
+    def evaluate(self, split=None):
+        """Evaluate the model."""
+        self.set_model_mode("eval")
+
+        if split is None:
+            split = self.cfg.EVAL.SPLIT
+
+        if split == "val" and self.val_loader is not None:
+            data_loader = self.val_loader
+        else:
+            split = "test"
+            data_loader = self.test_loader
+
+        logger.info(f"Evaluate on the *{split}* set")
+
+        for batch_idx, batch in enumerate(data_loader):
+            data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
+            name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
+
+        self.evaluator.evaluate(self.model, data_loader, self.iter, split)
+
 
     def parse_batch(self, batch):
         """Parse batch data."""

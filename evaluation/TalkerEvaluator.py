@@ -1,19 +1,45 @@
 import numpy as np
+import os
 import os.path as osp
 from collections import OrderedDict, defaultdict
 import torch
+from psbody.mesh import Mesh
 from sklearn.metrics import f1_score, confusion_matrix
 
 from base import EVALUATOR_REGISTRY, EvaluatorBase
+from utils import MeshRenderer
 
 @EVALUATOR_REGISTRY.register()
 class TalkerEvaluator(EvaluatorBase):
     """Evaluator for talking head generation."""
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, flame_model=None, device='0'):
         super().__init__(cfg)
         self._total = 0
+        self.flame_model = flame_model
+        if cfg.EVALUATE.LOAD_RENDER:
+            # Set environment for offscreen rendering
+            os.environ['EGL_DEVICE_ID'] = device
+            os.environ["PYOPENGL_PLATFORM"] = cfg.EVALUATE.PYOPENGL_PLATFORM # osmesa or egl
 
+            self.Mesh = Mesh
+            self.uv_coords = np.load(osp.join(cfg.TDMM.FLAME.ROOT, 'uv_coords.npz'))
+            self.mesh_render = self.setup_mesh_renderer(cfg.EVALUATE.MESH_RENDER,
+                                                        cfg.EVALUATE.REND_SIZE,
+                                                        cfg.EVALUATE.BLACK_BG)
+            
+    
+    def setup_mesh_renderer(self, render_name, size, black_bg):
+        if render_name == "PyMeshRenderer":
+            return MeshRenderer.PyMeshRenderer(size, black_bg=black_bg)
+        else:
+            raise ValueError(f"Unknown mesh renderer: {render_name}")
+
+    def evaluate(self, model, data_loader):
+        model.eval()
+        for batch_idx, batch in enumerate(data_loader):
+
+    
     def reset(self):
         self._correct = 0
         pass
@@ -34,63 +60,3 @@ class TalkerEvaluator(EvaluatorBase):
                 label = label.item()
                 matches_i = int(matches[i].item())
                 self._per_class_res[label].append(matches_i)
-
-    def evaluate(self):
-        results = OrderedDict()
-        acc = 100.0 * self._correct / self._total
-        err = 100.0 - acc
-        macro_f1 = 100.0 * f1_score(
-            self._y_true,
-            self._y_pred,
-            average="macro",
-            labels=np.unique(self._y_true)
-        )
-
-        # The first value will be returned by trainer.test()
-        results["accuracy"] = acc
-        results["error_rate"] = err
-        results["macro_f1"] = macro_f1
-
-        print(
-            "=> result\n"
-            f"* total: {self._total:,}\n"
-            f"* correct: {self._correct:,}\n"
-            f"* accuracy: {acc:.1f}%\n"
-            f"* error: {err:.1f}%\n"
-            f"* macro_f1: {macro_f1:.1f}%"
-        )
-
-        if self._per_class_res is not None:
-            labels = list(self._per_class_res.keys())
-            labels.sort()
-
-            print("=> per-class result")
-            accs = []
-
-            for label in labels:
-                classname = self._lab2cname[label]
-                res = self._per_class_res[label]
-                correct = sum(res)
-                total = len(res)
-                acc = 100.0 * correct / total
-                accs.append(acc)
-                print(
-                    f"* class: {label} ({classname})\t"
-                    f"total: {total:,}\t"
-                    f"correct: {correct:,}\t"
-                    f"acc: {acc:.1f}%"
-                )
-            mean_acc = np.mean(accs)
-            print(f"* average: {mean_acc:.1f}%")
-
-            results["perclass_accuracy"] = mean_acc
-
-        if self.cfg.TEST.COMPUTE_CMAT:
-            cmat = confusion_matrix(
-                self._y_true, self._y_pred, normalize="true"
-            )
-            save_path = osp.join(self.cfg.OUTPUT_DIR, "cmat.pt")
-            torch.save(cmat, save_path)
-            print(f"Confusion matrix is saved to {save_path}")
-
-        return results

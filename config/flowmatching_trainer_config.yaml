@@ -12,7 +12,7 @@ ENV:
     NAME: "TrainingFlowTalker"
     NOTES: "Training as baseline."
     TAGS: "Baseline"
-    MODE: "offline"
+    MODE: "online"
   EXTRA:
     STYLE_ENC_CKPT: 
 
@@ -37,9 +37,9 @@ DATASET:
 DATALOADER:
   NUM_WORKERS: 4
   TRAIN:
-    BATCH_SIZE: 32
+    BATCH_SIZE: 16
   TEST:
-    BATCH_SIZE: 64
+    BATCH_SIZE: 32
 
 TDMM:
   FLAME:
@@ -82,12 +82,12 @@ LOSS:
   NO_CONSTRAIN_PREV: False
   GEOMETRIC:
     W_VERTEX: 2e6  # weight of the vertex loss
-    W_VELOCITY: 1e6  # weight of the velocity loss
+    W_VELOCITY: 1e7  # weight of the velocity loss
     W_SMOOTH: 1e5   # weight of the vertex acceleration regularization
   HEAD:
     W_ANGLE: 0.05  # weight of the head angle loss
     W_VELOCITY: 5.0 # weight of the head angular velocity loss
-    W_SMOOTH: 0.05  # weight of the head angular acceleration regularization
+    W_SMOOTH: 0.5  # weight of the head angular acceleration regularization
     W_TRANS: 0.5
 
 TRAINER:
