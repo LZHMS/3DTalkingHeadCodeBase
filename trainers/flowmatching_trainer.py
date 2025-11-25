@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from base import TrainerBase, TRAINER_REGISTRY, build_evaluator
 from datasets import HDTF_TFHPDM, StyledTalkWrapper, HDTF_TFHPWrapper
-from models import StyleEncoder, FlowMatchingHead, FLAME, build_flame_config
+from models import StyleEncoder, FlowMatchingHead
 from evaluation import TalkerEvaluator
 from utils import AverageMeter, truncate_motion_coef_and_audio, get_coef_dict
 
@@ -25,7 +25,22 @@ class FlowMatchingTrainer(TrainerBase):
     
     def __init__(self, cfg):
         super().__init__(cfg)
+        # Build components of trainer
+        self.build_data_loader()
+        self.build_model()
+        self.evaluator = build_evaluator(cfg, self.flame, self.device)
 
+    def build_data_loader(self):
+        """Create essential data-related attributes."""
+        dm = HDTF_TFHPDM(self.cfg, HDTF_TFHPWrapper, infinite_train=True)
+
+        self.train_loader = dm.train_loader
+        self.val_loader = dm.val_loader
+        self.test_loader = dm.test_loader
+        self.dm = dm
+
+    def build_model(self):
+        """Build and register model."""
         # Load pre-trained style encoder
         if self.cfg.ENV.EXTRA.STYLE_ENC_CKPT != '':
             checkpoint = self.load_checkpoint(self.cfg.ENV.EXTRA.STYLE_ENC_CKPT)
@@ -39,27 +54,6 @@ class FlowMatchingTrainer(TrainerBase):
         self.style_enc.load_state_dict(checkpoint['state_dict'])
         self.style_enc.eval()
 
-        # Avatar model for loss computation
-        self.flame = FLAME(build_flame_config(self.cfg.TDMM.FLAME.ROOT)).to(self.device)
-        logger.info(f"Loaded FLAME model for loss computation.")
-
-        # Build components of trainer
-        self.build_data_loader()
-        self.build_model()
-        self.evaluator = build_evaluator(cfg, self.flame, self.device)
-        self.criterion = self.build_loss_metrics(self.cfg.LOSS.NAME)
-
-    def build_data_loader(self):
-        """Create essential data-related attributes."""
-        dm = HDTF_TFHPDM(self.cfg, HDTF_TFHPWrapper, infinite_train=True)
-
-        self.train_loader = dm.train_loader
-        self.val_loader = dm.val_loader
-        self.test_loader = dm.test_loader
-        self.dm = dm
-
-    def build_model(self):
-        """Build and register model."""
         logger.info(f"Building model {self.cfg.MODEL.NAME} ...")
         self.model = FlowMatchingHead(self.cfg)
 
@@ -211,15 +205,21 @@ class FlowMatchingTrainer(TrainerBase):
                     prev_motion_coef, prev_audio_feat, indicator=indicator
                 )
             
+            # Loss calculation by Evaluator
+            self.evaluator.reset(self.clip_id)
             # Flow matching loss
-            loss_flow = self.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
+            loss_flow = self.evaluator.criterion(predicted_v[:, data_cfg.N_PREV_MOTIONS:], target_v, reduction='none')
             
             # Geometric losses
             # Align motion_coef_gt and motion_pre to have the same sequence length
             motion_coef_gt = torch.cat([prev_motion_coef, motion_coef_in], dim=1) if clip_id != 0 else motion_coef_in
+            motion_pre = motion_pre[:, data_cfg.N_PREV_MOTIONS:] if clip_id == 0 else motion_pre
+
+            self.evaluator.geometric_loss()
+            
             coef_gt = get_coef_dict(motion_coef_gt, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                 rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
-            motion_pre = motion_pre[:, data_cfg.N_PREV_MOTIONS:] if clip_id == 0 else motion_pre
+            
             coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                 rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
             
@@ -327,10 +327,10 @@ class FlowMatchingTrainer(TrainerBase):
         logger.info(f"Evaluate on the *{split}* set")
 
         loss_meter = defaultdict(AverageMeter)
+        data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
         for test_round in range(n_rounds):
             for batch_idx, batch in enumerate(data_loader):
                 current_iter = test_round * len(data_loader) + batch_idx
-                data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
                 name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
         
                 # Extract style features
@@ -405,7 +405,9 @@ class FlowMatchingTrainer(TrainerBase):
                     motion_pre = motion_pre[:, data_cfg.N_PREV_MOTIONS:] if clip_id == 0 else motion_pre
                     coef_pred = get_coef_dict(motion_pre, shape_coef, self.dm.dataset.coef_stats, with_global_pose=False,
                                         rot_repr=self.cfg.MODEL.HEAD.ROT_REPR)
-                    
+                    if self.cfg.EVALUATE.LOAD_RENDER:
+                        self.evaluator.
+
                     verts_gt, _, _ = self.flame(coef_gt['shape'].view(-1, 100), coef_gt['exp'].view(-1, 50),
                                             coef_gt['pose'].view(-1, 6), return_lm2d=False, return_lm3d=False)
                     verts_pred, _, _ = self.flame(coef_pred['shape'].view(-1, 100), coef_pred['exp'].view(-1, 50),
@@ -489,27 +491,6 @@ class FlowMatchingTrainer(TrainerBase):
                         self.wandb_run.log({f"val/loss_{item}": loss.avg})
                     self.write_scalar(f"val/loss_{item}", loss.avg, current_iter)
 
-    def evaluate(self, split=None):
-        """Evaluate the model."""
-        self.set_model_mode("eval")
-
-        if split is None:
-            split = self.cfg.EVAL.SPLIT
-
-        if split == "val" and self.val_loader is not None:
-            data_loader = self.val_loader
-        else:
-            split = "test"
-            data_loader = self.test_loader
-
-        logger.info(f"Evaluate on the *{split}* set")
-
-        for batch_idx, batch in enumerate(data_loader):
-            data_cfg, loss_cfg = self.cfg.DATASET.HDTF_TFHP, self.cfg.LOSS
-            name, audio_pair, motion_coef_pair, shape_coef = self.parse_batch(batch)
-
-        self.evaluator.evaluate(self.model, data_loader, self.iter, split)
-
 
     def parse_batch(self, batch):
         """Parse batch data."""
@@ -519,9 +500,3 @@ class FlowMatchingTrainer(TrainerBase):
         audio_pair = [audio.to(self.device) for audio in batch["audio"]]
 
         return name, audio_pair, motion_coef_pair, shape_coef
-
-    def get_current_lr(self, names=None):
-        """Get current learning rate."""
-        names = self.get_model_names(names)
-        name = names[0]
-        return self._optims[name].param_groups[0]["lr"]

@@ -22,13 +22,15 @@ def main(args):
     base_cfg.print_info()
 
     trainer = build_trainer(base_cfg.cfg)
-    if args.eval_only:
+    if args.mode == "eval":
         trainer.load_model(args.model_dir, epoch=args.load_epoch)
         trainer.test()
-        return
-
-    if not args.no_train:
+    elif args.mode == "analysis":
+        trainer.dm.data_analysis()
+    elif args.mode == "train":
         trainer.train()
+    else:
+        raise ValueError(f"Unknown mode: {args.mode}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -39,10 +41,8 @@ if __name__ == '__main__':
         '--gpu', type=str, default='0', help='gpu id to use'
     )
     parser.add_argument(
-        '--no-train', type=bool, default=False, help='wether to train model'
-    )
-    parser.add_argument(
-        '--eval-only', action='store_true', help='wether to train model'
+        '--mode', type=str, choices=['train', 'eval', 'analysis'], 
+        default='train', help='Operation mode: train, eval, or analysis'
     )
     parser.add_argument('--debug', action='store_true', help='wether do debugging')
     parser.add_argument(

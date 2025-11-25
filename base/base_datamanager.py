@@ -103,6 +103,9 @@ class DataManager:
         table.append(["# test", f"{len(self.dataset.test):,}"])
 
         logger.info(f"Dataset summary:\n{tabulate(table)}")
+    
+    def data_analysis(self):
+        pass
 
 
 class DatasetWrapper(TorchDataset):

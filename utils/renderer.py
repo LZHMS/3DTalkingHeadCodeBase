@@ -1,11 +1,7 @@
-import os
 import tempfile
 
 import cv2
 import numpy as np
-
-os.environ['PYOPENGL_PLATFORM'] = 'osmesa'  # osmesa or egl
-# os.environ['PYOPENGL_PLATFORM'] = 'egl'
 import pyrender
 import trimesh
 from psbody.mesh import Mesh

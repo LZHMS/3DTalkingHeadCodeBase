@@ -11,12 +11,11 @@ from collections import OrderedDict, defaultdict
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
-import torch.nn.functional as F
+
 
 from utils import (
   tolist_if_not, mkdir_if_missing, Registry, check_availability,
-  RAdam, ConstantWarmupScheduler, LinearWarmupScheduler, calc_vq_loss, calc_logit_loss,
-  nt_xent_loss, AverageMeter, GradualWarmupScheduler)
+  RAdam, ConstantWarmupScheduler, LinearWarmupScheduler, AverageMeter, GradualWarmupScheduler)
 import logging
 logger: logging.Logger
 
@@ -54,6 +53,18 @@ class TrainerBase:
         self.check_cfg(cfg)
         self.system_init()
 
+    def check_cfg(self, cfg):
+        """Check whether some variables are set correctly for
+        the trainer (optional).
+
+        For example, a trainer might require a particular sampler
+        for training such as 'RandomDomainSampler', so it is good
+        to do the checking:
+
+        assert cfg.DATALOADER.SAMPLER_TRAIN == 'RandomDomainSampler'
+        """
+        pass
+
     def system_init(self):
         # System Initialization
         ## random seed setting
@@ -84,19 +95,6 @@ class TrainerBase:
         else:
           self.device = torch.device("cpu")
           logger.info('Setting device to {}'.format(self.device))
-
-
-    def check_cfg(self, cfg):
-        """Check whether some variables are set correctly for
-        the trainer (optional).
-
-        For example, a trainer might require a particular sampler
-        for training such as 'RandomDomainSampler', so it is good
-        to do the checking:
-
-        assert cfg.DATALOADER.SAMPLER_TRAIN == 'RandomDomainSampler'
-        """
-        pass
 
     def register_model(self, name="model", model=None, optim=None, sched=None):
         if self.__dict__.get("_models") is None:
@@ -191,7 +189,6 @@ class TrainerBase:
             # Finish the run and upload any remaining data.
             self.wandb_run.finish()
             
-
     def write_scalar(self, tag, scalar_value, global_step=None):
         if self._writer is None:
             # Do nothing if writer is not initialized
@@ -326,20 +323,6 @@ class TrainerBase:
             > model_backward_and_update
             > detect_anomaly
     """
-    def build_loss_metrics(self, loss_fc_name):
-        if loss_fc_name == "VQLoss":
-            logger.info("Using VQ loss function for metrics ...")
-            return calc_vq_loss
-        elif loss_fc_name == "LogitLoss":
-            logger.info("Using Logit loss function for metrics ...")
-            return calc_logit_loss
-        elif loss_fc_name == "NTXentLoss":
-            logger.info("Using NT-Xent loss function for metrics ...")
-            return nt_xent_loss
-        elif loss_fc_name == "L2Loss":
-            return F.mse_loss
-        elif loss_fc_name == "L1Loss":
-            return F.l1_loss
 
     def forward_backward(self, batch):
         raise NotImplementedError
@@ -596,6 +579,12 @@ class TrainerBase:
                 raise ValueError
             
         return scheduler
+    
+    def get_current_lr(self, names=None):
+        """Get current learning rate."""
+        names = self.get_model_names(names)
+        name = names[0]
+        return self._optims[name].param_groups[0]["lr"]
     
     """Save the model at a given directory.
         Functions:

@@ -22,6 +22,66 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 - 📈 **Experiment Tracking**: Built-in TensorBoard and WandB support
 - 🚀 **Production Ready**: Comprehensive logging, checkpointing, and evaluation tools
 
+## 📁 Codebase Structure
+```
+TrainerBase
+├── config
+│   ├── check_cfg
+│   └── system_init
+├── data
+│   ├── build_data_loader
+│   ├── DataManager
+│   │   ├── DatasetBase
+│   │   ├── DatasetWrapper
+│   │   ├── show_dataset_summary
+│   │   └── data_analysis
+├── model
+│   ├── build_model
+│   ├── get_model_names
+│   ├── register_model
+│   └── set_model_mode
+├── writer
+│   ├── init_writer
+│   ├── write_scalar
+│   └── close_writer
+├── train
+│   ├── parse_batch_train
+│   ├── before_train
+│   ├── train_epoch
+│   │   ├── before_epoch
+│   │   ├── run_epoch
+│   │   └── after_epoch
+│   ├── train_iter
+│   │   ├── before_iter
+│   │   ├── run_iter
+│   │   └── after_iter
+│   ├── forward_backward
+│   └── after_train
+├── optim
+│   ├── build_optimizer
+│   ├── build_lr_scheduler
+│   ├── model_backward_and_update
+│   │   ├── model_zero_grad
+│   │   ├── model_backward
+│   │   └── model_update
+│   ├── update_lr
+│   └── get_current_lr
+├── test
+│   └── parse_batch_test
+├── evaluator                   # Evaluator class
+│   └── build_loss_metrics
+├── save_load
+│   ├── save_model
+│   ├── save_checkpoint
+│   ├── load_model
+│   ├── load_checkpoint
+│   ├── load_pretrained_weights
+│   ├── resume_model_if_exist
+│   └── resume_from_checkpoint
+├── tools
+│   ├── detect_anomaly
+│   └── count_num_param
+```
 ## 📁 Project Structure
 
 ```
