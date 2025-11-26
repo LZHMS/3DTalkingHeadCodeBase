@@ -363,9 +363,13 @@ def run_yt_dlp_full_video(
     if base_cmd is None:
         return 1, err or "Unable to locate yt-dlp"
 
-    # 输出模板：使用视频ID作为文件名
+    # 为每个视频创建独立的子目录
+    video_output_dir = os.path.join(output_dir, video_id)
+    safe_mkdir(video_output_dir)
+
+    # 输出模板：使用视频ID作为文件名，放在视频专属目录中
     output_template = os.path.join(
-        output_dir,
+        video_output_dir,
         "%(id)s.%(ext)s",
     )
 
@@ -755,7 +759,7 @@ def download_with_ytdlp(
             #     progress.update(task_overall, advance=1)
             #     continue
 
-            # 创建分类目录
+            # 创建分类目录（现在视频ID子目录会在run_yt_dlp_full_video中创建）
             category_dir = os.path.join(output_dir, category)
             safe_mkdir(category_dir)
             
@@ -790,10 +794,11 @@ def download_with_ytdlp(
                 progress.update(task_overall, advance=1)
                 continue
 
-            # 解析下载结果
+            # 解析下载结果 - 传入正确的视频输出目录
             progress.update(task_id, completed=90, status="[yellow]Saving logs...")
             category_dir = os.path.join(output_dir, category)
-            parsed_result = parse_ytdlp_output_full_video(msg, video_id, category_dir)
+            video_output_dir = os.path.join(category_dir, video_id)
+            parsed_result = parse_ytdlp_output_full_video(msg, video_id, video_output_dir)
 
             # 记录日志
             log_filename = f"{video_id}.json"

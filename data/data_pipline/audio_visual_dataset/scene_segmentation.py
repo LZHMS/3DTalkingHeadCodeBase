@@ -95,7 +95,7 @@ def save_json_entry(entry, path):
         json.dump(entry, outfile, separators=(',', ':'), default=default_dump)
         outfile.write('\n')
 
-def collect_video_data_path(data_dir: str) -> List[Dict]:
+def collect_video_data_path(data_dir: str):
     """
     Recursively collect all video file paths and metadata from specified directory.
     
@@ -118,25 +118,30 @@ def collect_video_data_path(data_dir: str) -> List[Dict]:
     video_data = []
     for category in os.listdir(data_dir):
         category_path = os.path.join(data_dir, category)
-        if not os.path.isdir(category_path):
+        if not os.path.isdir(category_path) or category.endswith('logs'):
             continue
         
-        for root, dirs, files in os.walk(category_path):
-            for file in files:
-                if len(file.split('.')) == 3:
-                    continue
+        for video_path in os.listdir(category_path):
+            video_cate_path =  os.path.join(category_path, video_path)
+            if not os.path.isdir(video_cate_path):
+                continue
+            
+            for root, dirs, files in os.walk(video_cate_path):
+                for file in files:
+                    if len(file.split('.')) == 3:
+                        continue
 
-                if file.endswith(".mp4") and file.split('.')[0].endswith("_h264"):
-                    video_path = os.path.join(root, file)
-                    video_id = os.path.splitext(file)[0][:-5]  # Remove '_h264' suffix
-                    video_cate = os.path.basename(root)
-                    video_data.append({
-                        "style-cate": category,
-                        "video-cate": video_cate,
-                        "video-id": video_id,
-                        "video-path": video_path,
-                        "audio-path": os.path.join(root,video_id + ".m4a")
-                    })
+                    if file.endswith(".mp4") and file.split('.')[0].endswith("_h264"):
+                        video_path = os.path.join(root, file)
+                        video_id = os.path.splitext(file)[0][:-5]  # Remove '_h264' suffix
+                        video_cate = os.path.basename(root)
+                        video_data.append({
+                            "style-cate": category,
+                            "video-cate": video_cate,
+                            "video-id": video_id,
+                            "video-path": video_path,
+                            "audio-path": os.path.join(root,video_id + ".m4a")
+                        })
     return video_data
 
 def check_video_codec(video_path):

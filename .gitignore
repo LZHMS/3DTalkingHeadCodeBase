@@ -34,4 +34,5 @@ mini_filtered_video_clips_with_captions.json
 
 # filt data videos
 data/data_pipline/audio_visual_dataset/output
+data/data_pipline/audio_visual_dataset/output_V1
 data/data_pipline/audio_visual_dataset/output_clips

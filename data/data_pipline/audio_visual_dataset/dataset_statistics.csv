@@ -1,8 +1,8 @@
 ﻿Category,ID Count,Video Count,Total Duration(s),Total Duration(m),Total Duration(h),, ,  ,Category,Avg Duration/Video(s),Avg Duration/ID(m),Avg Videos/ID
 Interview,315,3301,58446.54,974.11,16.24,,,,Interview,17.71,3.09,10.48
-Lecture,69,942,13664.68,227.74,3.8,,,,Lecture,14.51,3.3,13.65
+Lecture,149,1722,25676.18,427.94,7.13,,,,Lecture,14.91,2.87,11.56
 Lecture_Prev,151,1737,34704.48,578.41,9.64,,,,Lecture_Prev,19.98,3.83,11.5
 News,446,770,67356.22,1122.6,18.71,,,,News,87.48,2.52,1.73
-Speech,133,838,19533.94,325.57,5.43,,,,Speech,23.31,2.45,6.3
+Speech,182,2239,33379.78,556.33,9.27,,,,Speech,14.91,3.06,12.3
 cache,58,195,10537.98,175.63,2.93,,,,cache,54.04,3.03,3.36
-Total,1172,7783,204243.84,3404.06,56.75,,,,,,,
+Total,1301,9964,230101.18,3835.02,63.92,,,,,,,
