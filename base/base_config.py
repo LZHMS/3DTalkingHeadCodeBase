@@ -115,14 +115,6 @@ class BaseConfig:
     cfg.DATALOADER.TEST = CN()
     cfg.DATALOADER.TEST.BATCH_SIZE = 32
 
-
-    ###########################
-    # FLAME
-    ###########################
-    cfg.TDMM = CN()     # 3DMM model
-    cfg.TDMM.FLAME = CN()
-    cfg.TDMM.FLAME.ROOT = "pretrained/FLAME"
-
     ###########################
     # Model
     ###########################
@@ -258,26 +250,6 @@ class BaseConfig:
     cfg.OPTIM.MIN_LR_RATIO = 2e-6 # for gradualThenDecay
 
     ###########################
-    # Loss
-    ###########################
-    cfg.LOSS = CN()
-    cfg.LOSS.NAME = "VQLoss"
-    cfg.LOSS.TARGET = "sample" # foe diffusion model, either "sample" or "noise"
-    cfg.LOSS.NO_CONSTRAIN_PREV = False
-    cfg.LOSS.QUANT_LOSS_WEIGHT = 1.0
-    cfg.LOSS.CONTRASTIVE = CN()
-    cfg.LOSS.CONTRASTIVE.TEMPRATURE = 0.1
-    cfg.LOSS.GEOMETRIC = CN()
-    cfg.LOSS.GEOMETRIC.W_VERTEX = 2e6  # weight of the vertex loss
-    cfg.LOSS.GEOMETRIC.W_VELOCITY = 1e7  # weight of the velocity loss
-    cfg.LOSS.GEOMETRIC.W_SMOOTH = 1e5   # weight of the vertex acceleration regularization
-    cfg.LOSS.HEAD = CN()
-    cfg.LOSS.HEAD.W_ANGLE = 0.05  # weight of the head angle loss
-    cfg.LOSS.HEAD.W_VELOCITY = 5.0 # weight of the head angular velocity loss
-    cfg.LOSS.HEAD.W_SMOOTH = 0.5  # weight of the head angular acceleration regularization
-    cfg.LOSS.HEAD.W_TRANS = 0.5  # weight of the head constraint during window transition
-
-    ###########################
     # Trainer specifics
     ###########################
     cfg.TRAINER = CN()
@@ -321,11 +293,34 @@ class BaseConfig:
 
     cfg.EVALUATE = CN()
     cfg.EVALUATE.LOAD_RENDER = False
-    cfg.EVALUATE.MESH_RENDER = "PyMeshRenderer"
-    cfg.EVALUATE.REND_SIZE = (640, 640)
-    cfg.EVALUATE.BLACK_BG = False
-    cfg.EVALUATE.PYOPENGL_PLATFORM = "osmesa"  # 'osmesa' or 'egl'
+    cfg.EVALUATE.SAVE_COEF = False
+    
+    cfg.EVALUATE.LOSS = CN()
+    cfg.EVALUATE.LOSS.NAME = "VQLoss"
+    cfg.EVALUATE.LOSS.TARGET = "sample" # foe diffusion model, either
+    cfg.EVALUATE.LOSS.NO_CONSTRAIN_PREV = False
+    cfg.EVALUATE.LOSS.QUANT_LOSS_WEIGHT = 1.0
+    cfg.EVALUATE.LOSS.CONTRASTIVE = CN()
+    cfg.EVALUATE.LOSS.CONTRASTIVE.TEMPRATURE = 0.1
+    cfg.EVALUATE.LOSS.GEOMETRIC = CN()
+    cfg.EVALUATE.LOSS.GEOMETRIC.W_VERTEX = 2e6  # weight of the vertex loss
+    cfg.EVALUATE.LOSS.GEOMETRIC.W_VELOCITY = 1e7  # weight of the velocity loss
+    cfg.EVALUATE.LOSS.GEOMETRIC.W_SMOOTH = 1e5   # weight of the vertex acceleration regularization
+    cfg.EVALUATE.LOSS.GEOMETRIC.HEAD = CN()
+    cfg.EVALUATE.LOSS.GEOMETRIC.HEAD.W_ANGLE = 0.05  # weight of the head angle loss
+    cfg.EVALUATE.LOSS.GEOMETRIC.HEAD.W_VELOCITY = 5.0 # weight of the head angular velocity loss
+    cfg.EVALUATE.LOSS.GEOMETRIC.HEAD.W_SMOOTH = 0.5  # weight of the head angular acceleration regularization
+    cfg.EVALUATE.LOSS.GEOMETRIC.HEAD.W_TRANS = 0.5  # weight of the head constraint during window transition
 
+    cfg.EVALUATE.TDMM = CN()
+    cfg.EVALUATE.TDMM.FLAME = CN()
+    cfg.EVALUATE.TDMM.FLAME.ROOT = "pretrained/FLAME"
+
+    cfg.EVALUATE.RENDER = CN()
+    cfg.EVALUATE.RENDER.NAME = "PyMeshRenderer"
+    cfg.EVALUATE.RENDER.REND_SIZE = (640, 640)
+    cfg.EVALUATE.RENDER.BLACK_BG = False
+    cfg.EVALUATE.RENDER.PYOPENGL_PLATFORM = "osmesa"  # 'osmesa' or 'egl'
     # OP
     self.cfg = cfg
 
