@@ -1,10 +1,11 @@
-from einops.layers.torch import Rearrange
+import math
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from einops.layers.torch import Rearrange
 
 from utils.base_model_util import *
-import math
+
 
 class Norm(nn.Module):
   """ Norm Layer """

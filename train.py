@@ -1,9 +1,12 @@
 import argparse
+
+from base.base_config import BaseConfig
+from base.base_trainer import build_trainer
+from trainers.diffposetalk_trainer import StyleEncoderTrainer, DiffPoseTalkTrainer
+
 import warnings
 warnings.filterwarnings('ignore')
 
-from base import BaseConfig, build_trainer
-from trainers import StyleEncoderTrainer, DiffPoseTalkTrainer
 
 def merge_args(base_cfg, args):
     if args.gpu:

@@ -14,17 +14,15 @@ import cv2
 import tempfile
 import os.path as osp
 import numpy as np
-from tqdm import tqdm
 import soundfile as sf
 from functools import reduce
 
 import torch
 import torch.nn.functional as F
-from psbody.mesh import Mesh
 
-from base import EVALUATOR_REGISTRY, EvaluatorBase
-from models import FLAME, build_flame_config
-from utils import PyMeshRenderer, calc_vq_loss, calc_logit_loss, nt_xent_loss
+from base.base_evaluator import EVALUATOR_REGISTRY, EvaluatorBase
+from models.avatar.flame import FLAME, build_flame_config
+from utils.loss import calc_vq_loss, calc_logit_loss, nt_xent_loss
 from utils.media import combine_video_and_audio, convert_video, reencode_audio
 
 import logging
@@ -85,6 +83,8 @@ class TDTalkerEvaluator(EvaluatorBase):
 
         # Load renderer if specified in config
         if cfg.LOAD_RENDER:
+            from psbody.mesh import Mesh
+            from utils.renderer import PyMeshRenderer
             self.Mesh = Mesh
             self.uv_coords = np.load(osp.join(cfg.TDMM.FLAME.ROOT, 'uv_coords.npz'))
             self.mesh_render = self.setup_mesh_renderer(cfg.RENDER.NAME,

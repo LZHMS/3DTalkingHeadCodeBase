@@ -1,10 +1,12 @@
 import os
 import os.path as osp
+import gdown
 import tarfile
 import zipfile
-import gdown
 
-from utils import check_isfile, Registry, check_availability
+from utils.registry import Registry
+from utils.tools import check_availability
+
 import logging
 logger: logging.Logger
 

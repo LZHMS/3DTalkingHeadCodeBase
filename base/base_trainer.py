@@ -8,16 +8,21 @@ import os
 import os.path as osp
 from functools import partial
 from collections import OrderedDict, defaultdict
+
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
+from utils.registry import Registry
+from utils.meters import AverageMeter
+from utils.tools import tolist_if_not, mkdir_if_missing, check_availability
 
-from utils import (
-  tolist_if_not, mkdir_if_missing, Registry, check_availability,
-  RAdam, ConstantWarmupScheduler, LinearWarmupScheduler, AverageMeter, GradualWarmupScheduler)
+from utils.optim.optimizer import RAdam
+from utils.optim.scheduler import ConstantWarmupScheduler, LinearWarmupScheduler, GradualWarmupScheduler
+
 import logging
 logger: logging.Logger
+
 
 TRAINER_REGISTRY = Registry("TRAINER")
 

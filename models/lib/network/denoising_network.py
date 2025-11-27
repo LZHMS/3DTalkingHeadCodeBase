@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-from ..head.pose_encoding import PositionalEncoding
-from ..common import enc_dec_mask
 import torch.nn.functional as F
+
+from ..common import enc_dec_mask
+from ..head.pose_encoding import PositionalEncoding
+
 
 class DenoisingNetwork(nn.Module):
     def __init__(self, cfg):

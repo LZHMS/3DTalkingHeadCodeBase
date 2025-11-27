@@ -1,4 +1,6 @@
-from utils import Registry, check_availability
+from utils.registry import Registry
+from utils.tools import check_availability
+
 import logging
 logger: logging.Logger
 

@@ -1,7 +1,4 @@
 import logging
-import random
-import numpy as np
-import torch
 import builtins
 from yacs.config import CfgNode as CN
 

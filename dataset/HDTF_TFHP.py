@@ -1,11 +1,14 @@
 import os
-import pickle
-import lmdb
 import io
-import torchaudio
+import lmdb
+import pickle
 import torch
+import torchaudio
 import numpy as np
-from base import Datum, DatasetBase, DATASET_REGISTRY, DataManager, DatasetWrapper
+
+from base.base_dataset import Datum, DatasetBase, DATASET_REGISTRY
+from base.base_datamanager import DataManager, DatasetWrapper
+
 import logging
 logger: logging.Logger
 
@@ -125,29 +128,6 @@ class HDTF_TFHPDM(DataManager):
                 dataset_wrapper=None,
                 infinite_train=False):
         super().__init__(cfg, dataset_wrapper, infinite_train)
-
-class StyledTalkWrapper(DatasetWrapper):
-
-    def __init__(self, cfg, data_source, is_train=False):
-        super().__init__(cfg, data_source, is_train)
-        self.rot_repr = cfg.MODEL.HEAD.ROT_REPR
-
-    def __getitem__(self, idx):
-        item = self.data_source[idx]
-
-        output = {"index": idx, "motion_coef": []}
-        for clip_id in range(2):
-            motion_coef = torch.cat([item.coefficients[clip_id][k] for k in ['exp', 'pose']], dim=-1)
-
-            if self.rot_repr == 'aa':
-                # Remove mouth rotation around y, z axis
-                motion_coef = motion_coef[:, :-2]
-            output["motion_coef"].append(motion_coef)
-        output.update(item.to_dict())
-        for k in ["audio", "coefficients"]:
-            output.pop(k)
-            
-        return output
 
 class HDTF_TFHPWrapper(DatasetWrapper):
 

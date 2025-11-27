@@ -4,7 +4,7 @@ export PYOPENGL_PLATFORM=osmesa
 # custom config
 TRAINER=StyleEncoderTrainer
 DATASET=HDTF_TFHP
-TAG=Test
+TAG=Eval
 
 DIR=output/${DATASET}/${TRAINER}/${TAG}
 if [ -d "$DIR" ]; then
@@ -12,7 +12,7 @@ if [ -d "$DIR" ]; then
   rm -rf ${DIR}
 else
   mkdir -p ${DIR}
-  python -m main.train --mode train \
+  python train.py --mode train \
     --config-file config/style_trainer_config.yaml \
     ENV.OUTPUT_DIR ${DIR} \
     DATASET.NAME ${DATASET} \

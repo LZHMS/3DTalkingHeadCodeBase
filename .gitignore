@@ -21,8 +21,6 @@ pretrained/
 
 # ignore the data
 HDTF_TFHP/
-VOCASET/
-TalkScene/
 models/Avatar/data/
 
 node_modules/
