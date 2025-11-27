@@ -1,11 +1,13 @@
-# Talking Head Codebase
+# Structured Coding for 3D Talking Head Codebase
 
 <div align="center">
 
 **A Modular and Extensible Framework for 3D Talking Head Generation Research**
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-1.10+-ee4c2c.svg)](https://pytorch.org/)
+**⭐ Star us on GitHub if this project helps your research!**
+
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>
@@ -16,13 +18,77 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 
 **Key Features:**
 - 🔧 **Modular Architecture**: Decoupled components for easy extension and customization
-- 🎨 **Multi-Model Support**: Integrates various model architectures (VQ-VAE, Transformer, etc.)
+- 🎨 **DiffPoseTalk Model**: Implements diffusion-based talking head generation with style encoding
 - 📊 **Unified Training Framework**: Trainer-based system with full pipeline automation
 - ⚙️ **Flexible Configuration**: YACS-based hierarchical configuration management
 - 📈 **Experiment Tracking**: Built-in TensorBoard and WandB support
 - 🚀 **Production Ready**: Comprehensive logging, checkpointing, and evaluation tools
 
-## 📁 Codebase Structure
+## 📁 Project Structure
+
+```
+3DTalkingHeadCodeBase/
+├── base/                       # Core base classes
+│   ├── base_config.py         # Configuration base class
+│   ├── base_dataset.py        # Dataset base class
+│   ├── base_datamanager.py    # Data manager base class
+│   ├── base_model.py          # Model base class
+│   ├── base_trainer.py        # Trainer base class
+│   └── base_evaluator.py      # Evaluator base class
+│
+├── config/                     # Configuration files
+│   ├── difftalk_trainer_config.yaml  # DiffPoseTalk trainer config
+│   └── style_trainer_config.yaml     # Style encoder trainer config
+│
+├── dataset/                    # Dataset implementations
+│   └── HDTF_TFHP.py           # HDTF-TFHP dataset
+│
+├── models/                     # Model implementations
+│   ├── diffposetalk.py        # DiffPoseTalk model
+│   ├── avatar/                # Avatar related modules
+│   │   ├── flame.py           # FLAME head model
+│   │   └── lbs.py             # Linear blend skinning
+│   └── lib/                   # Model components
+│       ├── base_models.py     # Transformer, Attention, etc.
+│       ├── common.py          # Common utilities
+│       ├── quantizer.py       # Vector quantization
+│       ├── audio/             # Audio feature extractors
+│       ├── head/              # Head model components
+│       └── network/           # Network architectures
+│
+├── trainers/                   # Training logic
+│   └── diffposetalk_trainer.py # DiffPoseTalk trainer
+│
+├── evaluation/                 # Evaluation metrics
+│   └── TalkerEvaluator.py     # Talking head evaluator
+│
+├── utils/                      # Utility functions
+│   ├── optim/                 # Optimizers and schedulers
+│   ├── tools.py               # General utilities
+│   ├── meters.py              # Metric tracking
+│   ├── registry.py            # Component registration
+│   ├── loss.py                # Loss functions
+│   ├── media.py               # Media utilities
+│   └── renderer.py            # Rendering utilities
+│
+├── scripts/                    # Shell scripts
+│   ├── style_train.sh         # Style encoder training script
+│   └── talker_train.sh        # Talker training script
+│
+├── data/                       # Data directory
+│   └── HDTF_TFHP/             # HDTF-TFHP dataset files
+│
+├── output/                     # Training outputs
+│   └── HDTF_TFHP/             # Output for HDTF-TFHP experiments
+│
+├── pretrained/                 # Pretrained models
+├── train.py                    # Main training entry point
+├── environment.yml            # Conda environment file
+└── requirements.txt           # Python dependencies
+```
+
+## 📁 Trainer Architecture
+
 ```
 TrainerBase
 ├── config
@@ -68,7 +134,7 @@ TrainerBase
 │   └── get_current_lr
 ├── test
 │   └── parse_batch_test
-├── evaluator                   # Evaluator class
+├── evaluator
 │   └── build_loss_metrics
 ├── save_load
 │   ├── save_model
@@ -78,59 +144,9 @@ TrainerBase
 │   ├── load_pretrained_weights
 │   ├── resume_model_if_exist
 │   └── resume_from_checkpoint
-├── tools
-│   ├── detect_anomaly
-│   └── count_num_param
-```
-## 📁 Project Structure
-
-```
-TalkingHeadCodebase/
-├── base/                       # Core base classes
-│   ├── base_config.py         # Configuration base class
-│   ├── base_dataset.py        # Dataset base class
-│   ├── base_datamanager.py    # Data manager base class
-│   ├── base_model.py          # Model base class
-│   ├── base_trainer.py        # Trainer base class
-│   └── base_evaluator.py      # Evaluator base class
-│
-├── config/                     # Configuration files
-│   ├── trainer_config.py      # Training configuration
-│   └── codetalker/            # Model-specific configs
-│
-├── datasets/                   # Dataset implementations
-│   ├── Vocaset.py             # VOCASET dataset
-│   └── HDTF_TFHP.py           # HDTF-TFHP dataset
-│
-├── models/                     # Model implementations
-│   ├── vqae.py                # VQ-VAE model
-│   ├── StyleVQAE.py           # Style VQ-VAE model
-│   ├── DiffPoseTalk/          # DiffPoseTalk model family
-│   └── lib/                   # Model components
-│       ├── base_models.py     # Transformer, Attention, etc.
-│       ├── quantizer.py       # Vector quantization
-│       └── head/              # Model heads
-│
-├── trainers/                   # Training logic
-│   ├── codetalker.py          # CodeTalker trainer
-│   ├── codestyle.py           # CodeStyle trainer
-│   └── DiffPoseTalk/          # DiffPoseTalk trainers
-│
-├── evaluation/                 # Evaluation metrics
-│   └── CodeTalkerEvaluator.py # Evaluation pipeline
-│
-├── utils/                      # Utility functions
-│   ├── optim/                 # Optimizers and schedulers
-│   ├── tools.py               # General utilities
-│   ├── meters.py              # Metric tracking
-│   └── registry.py            # Component registration
-│
-├── main/                       # Entry points
-│   ├── train.py               # Main training script
-│   └── codetalker/            # Model-specific scripts
-│
-└── scripts/                    # Shell scripts
-    └── setup.sh               # Setup and launch script
+└── tools
+    ├── detect_anomaly
+    └── count_num_param
 ```
 
 ## 🚀 Quick Start
@@ -139,8 +155,19 @@ TalkingHeadCodebase/
 
 ```bash
 # Clone the repository
-git clone https://github.com/LZHMS/TalkingHeadCodebase.git
-cd TalkingHeadCodebase
+git clone https://github.com/LZHMS/3DTalkingHeadCodeBase.git
+cd 3DTalkingHeadCodeBase
+
+# Create conda environment
+conda create -n talkinghead python=3.9
+conda activate talkinghead
+
+# Or use the provided environment file
+conda env create -f environment.yml
+conda activate talkinghead
+
+# Install PyTorch (adjust for your CUDA version)
+pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -149,22 +176,27 @@ pip install -r requirements.txt
 ### Training
 
 ```bash
-# Train with default configuration
-python main/train.py --config-file config/trainer_config.yaml
+# Train DiffPoseTalk with default configuration
+python train.py --config-file config/difftalk_trainer_config.yaml
+
+# Train Style Encoder
+python train.py --config-file config/style_trainer_config.yaml
 
 # Train with custom settings
-python main/train.py \
-    --config-file config/trainer_config.yaml \
+python train.py \
+    --config-file config/difftalk_trainer_config.yaml \
     --gpu 0,1 \
-    TRAINER.NAME CodeTalkerTrainer \
-    DATASET.NAME HDTF_TFHP \
     OPTIM.LR 0.0001
 ```
 
-### Using the Setup Script
+### Using the Training Scripts
 
 ```bash
-bash scripts/setup.sh
+# Train style encoder
+bash scripts/style_train.sh
+
+# Train talking head model
+bash scripts/talker_train.sh
 ```
 
 ## 🏗️ Architecture
@@ -212,7 +244,7 @@ OPTIM:
   MAX_EPOCH: 100
 
 DATASET:
-  NAME: HDTF_TFHP
+  NAME: VOCASET
   ROOT: ./data
   BATCH_SIZE: 32
 ```
@@ -234,16 +266,14 @@ class CustomTrainer(TrainerBase):
 ## 📊 Supported Models
 
 | Model | Type | Paper | Status |
-|-------|------|-------|--------|
-| VQ-VAE | Vector Quantization | [Esser et al., 2021] | ✅ |
-| CodeTalker | Audio-driven | [Xing et al., 2023] | ✅ |
-| DiffPoseTalk | Diffusion-based | - | 🚧 |
-| StyleEncoder | Style-based | - | 🚧 |
+|-------|------|-------|---------|
+| DiffPoseTalk | Diffusion + Style | [Sun et al., 2024] | ✅ |
 
 ## 📈 Datasets
 
-- **VOCASET**: Speech-driven 3D facial animation
-- **HDTF-TFHP**: High-definition talking face dataset with 3D head pose
+| Dataset | Description | Subjects | Status |
+|---------|-------------|----------|---------|
+| HDTF-TFHP | High-definition talking face with 3D head pose | - | ✅ |
 
 ## 🛠️ Advanced Features
 
@@ -251,8 +281,8 @@ class CustomTrainer(TrainerBase):
 
 ```bash
 python -m torch.distributed.launch \
-    --nprocs_per_node=4 \
-    main/train.py --config-file config.yaml
+    --nproc_per_node=4 \
+    train.py --config-file config/difftalk_trainer_config.yaml
 ```
 
 ### Experiment Tracking
@@ -279,8 +309,9 @@ trainer.resume_model_if_exist("./checkpoint_dir")
 ### Add a New Model
 
 ```python
-from base import BaseModel
+from base import BaseModel, MODEL_REGISTRY
 
+@MODEL_REGISTRY.register()
 class YourModel(BaseModel):
     def __init__(self, cfg):
         super().__init__()
@@ -336,12 +367,29 @@ This codebase follows a **registry-based modular design** where:
 3. **Configuration-Driven**: All hyperparameters managed through YACS config
 4. **Decoupled Training**: Trainer handles all training logic separately from model
 
+## 📖 Citation
+
+If you find this codebase useful for your research, please consider citing:
+
+```bibtex
+@misc{3DTalkingHeadCodeBase,
+  author       = {Zhihao Li},
+  title        = {3DTalkingHeadCodeBase: A Modular Framework for 3D Talking Head Generation},
+  year         = {2025},
+  publisher    = {GitHub},
+  journal      = {GitHub Repository},
+  howpublished = {\url{https://github.com/LZHMS/3DTalkingHeadCodeBase}}
+}
+```
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
+- [Dassl.pytorch](https://github.com/KaiyangZhou/Dassl.pytorch) for the foundational training framework architecture
+- [DiffPoseTalk](https://github.com/DiffPoseTalk/DiffPoseTalk) for diffusion-based methods
 - YACS for configuration management
 - PyTorch team for the deep learning framework
 - The talking head research community
@@ -351,9 +399,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For questions and feedback, please open an issue or contact the maintainers.
 
 ---
-
-<div align="center">
-
-**⭐ Star us on GitHub if this project helps your research!**
-
-</div>
