@@ -22,4 +22,4 @@ FLAME/
 
 # ignore the data
 data/HDTF_TFHP
-audio_visual_dataset/
+data/data_pipline/audio_visual_dataset/
