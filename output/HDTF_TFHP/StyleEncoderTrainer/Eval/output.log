@@ -1,0 +1,1155 @@
+[2025-11-27 22:44:46 base_config.py line 305]=>INFO: Initializing main logger ...
+[2025-11-27 22:44:46 base_config.py line 332]=>INFO: Collecting system info ...
+[2025-11-27 22:44:46 base_config.py line 333]=>INFO: Project configuration:
+DATALOADER:
+  NUM_WORKERS: 4
+  TEST:
+    BATCH_SIZE: 64
+  TRAIN:
+    BATCH_SIZE: 32
+DATASET:
+  HDTF_TFHP:
+    AUDIO_SR: 16000
+    COEF_FPS: 25
+    COEF_STATS: stats_train.npz
+    CROP: random
+    LMDB: 
+    MOTIONS: 100
+    N_PREV_MOTIONS: 10
+    PAD_MODE: zero
+    TEST: test.txt
+    TRAIN: train.txt
+    TRUNC_PROB1: 0.3
+    TRUNC_PROB2: 0.4
+    USE_CONTEXT_AUDIO: True
+    VAL: val.txt
+  NAME: HDTF_TFHP
+  ROOT: ./data/
+  VAL_PERCENT: 0.1
+ENV:
+  DESCRIPTION: Train the style encoder of DiffPoseTalk.
+  EXTRA:
+    
+  GPU: 0
+  NAME: StyleEncoder_Trainer
+  OUTPUT_DIR: output/HDTF_TFHP/StyleEncoderTrainer/Eval
+  RESUME: 
+  SEED: 2025
+  USE_CUDA: True
+  USE_WANDB: False
+  VERBOSE: True
+  VERSION: 1
+  WANDB:
+    ENTITY: 3DVZHao
+    KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
+    MODE: online
+    NAME: TrainingStyleEncoder
+    NOTES: Training as the baseline model.
+    PROJECT: 3DTalkingHead
+    TAGS: Baseline
+EVALUATE:
+  EVALUATOR: TDTalkerEvaluator
+  LOAD_RENDER: False
+  LOSS:
+    CONTRASTIVE:
+      TEMPRATURE: 0.1
+    GEOMETRIC:
+      HEAD:
+        W_ANGLE: 0.05
+        W_SMOOTH: 0.5
+        W_TRANS: 0.5
+        W_VELOCITY: 5.0
+      W_SMOOTH: 100000.0
+      W_VELOCITY: 10000000.0
+      W_VERTEX: 2000000.0
+    NAME: L2Loss
+  NO_CONSTRAIN_PREV: False
+  RENDER:
+    BLACK_BG: False
+    NAME: PyMeshRenderer
+    REND_SIZE: (640, 640)
+  SAVE_COEF: False
+  TARGET: sample
+  TDMM:
+    FLAME:
+      ROOT: pretrained/FLAME
+INPUT:
+  GN_MEAN: 0.0
+  GN_STD: 0.15
+  NO_TRANSFORM: False
+  RANDAUGMENT_M: 10
+  RANDAUGMENT_N: 2
+LOSS:
+  CONTRASTIVE:
+    TEMPRATURE: 0.1
+  NAME: NTXentLoss
+MODEL:
+  BACKBONE:
+    DIFF_SCHEDULE: cosine
+    FACE_QUAN_NUM: 16
+    HIDDEN_SIZE: 128
+    INAFFINE: False
+    INTERMEDIATE_SIZE: 1536
+    IN_DIM: 50
+    NAME: TransformerEncoder
+    NEG: 0.2
+    NUM_ATTENTION_HEADS: 4
+    NUM_HIDDEN_LAYERS: 4
+    N_STEPS: 1000
+    QUANT_FACTOR: 0
+    WINDOW_SIZE: 1
+  CFG_MODE: incremental
+  GUIDING_CONDITIONS: audio,style
+  HEAD:
+    ACTIVATION: relu
+    ALIGN_MASK_WIDTH: 0
+    AUDIO_DIM: 128
+    AUDIO_MODEL: wav2vec2
+    BN: True
+    DROPOUT: 0.0
+    HIDDEN_LAYERS: ()
+    NAME: 
+    NO_HEAD_POSE: False
+    N_EMBED: 256
+    ROT_REPR: aa
+    STYLE_DIM: 128
+    USE_INDICATOR: False
+    USE_LEARNABLE_PE: True
+    ZQUANT_DIM: 64
+  INIT_WEIGHTS: 
+  NAME: StyleEncoder
+  TAIL:
+    MLP_RATIO: 4
+    NAME: 
+    NUM_HIDDEN_LAYERS: 4
+    TYARGET: sample
+OPTIM:
+  ADAM_BETA1: 0.9
+  ADAM_BETA2: 0.999
+  ADAPTIVE_LR: False
+  BASE_LR_MULT: 0.1
+  FACTOR: 0.3
+  GAMMA: 0.5
+  LR: 0.0001
+  LR_SCHEDULER: cosine
+  LR_UPDATE_FREQ: 1
+  MIN_LR_RATIO: 2e-06
+  MOMENTUM: 0.9
+  NAME: adam
+  NEW_LAYERS: ()
+  RMSPROP_ALPHA: 0.99
+  SGD_DAMPNING: 0
+  SGD_NESTEROV: True
+  STAGED_LR: False
+  STEP_LR: True
+  STEP_SIZE: 20
+  WARMUP_CONS_LR: 1e-05
+  WARMUP_EPOCHS: -1
+  WARMUP_ITERS: -1
+  WARMUP_MIN_LR: 1e-05
+  WARMUP_MULTIPLIER: 0
+  WARMUP_RECOUNT: True
+  WARMUP_TYPE: linear
+  WEIGHT_DECAY: 0.0005
+TEST:
+  FINAL_MODEL: last_step
+  NO_TEST: False
+  SPLIT: test
+TRAIN:
+  EVALUATE: True
+  EVAL_FREQ: 20
+  MAX_EPOCHS: 50
+  MAX_ITERS: 200
+  PRINT_FREQ: 5
+  RENDER_FREQ: 10
+  SAVE_FREQ: 20
+  START_EPOCH: 0
+  SYNC_BN: False
+  USE_ITERS: True
+  USE_SGD: False
+TRAINER:
+  NAME: StyleEncoderTrainer
+[2025-11-27 22:44:46 base_config.py line 334]=>INFO: Collecting env info ...
+[2025-11-27 22:44:49 base_config.py line 335]=>INFO: Env information:
+PyTorch version: 2.0.0+cu117
+Is debug build: False
+CUDA used to build PyTorch: 11.7
+ROCM used to build PyTorch: N/A
+
+OS: Ubuntu 24.04.2 LTS (x86_64)
+GCC version: (Ubuntu 11.4.0-9ubuntu1) 11.4.0
+Clang version: Could not collect
+CMake version: version 3.30.3
+Libc version: glibc-2.39
+
+Python version: 3.9.23 (main, Jun  5 2025, 13:40:20)  [GCC 11.2.0] (64-bit runtime)
+Python platform: Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39
+Is CUDA available: True
+CUDA runtime version: 11.8.89
+CUDA_MODULE_LOADING set to: LAZY
+GPU models and configuration: GPU 0: NVIDIA GeForce RTX 4090 D
+Nvidia driver version: 560.94
+cuDNN version: Could not collect
+HIP runtime version: N/A
+MIOpen runtime version: N/A
+Is XNNPACK available: True
+
+CPU:
+Architecture:                         x86_64
+CPU op-mode(s):                       32-bit, 64-bit
+Address sizes:                        46 bits physical, 48 bits virtual
+Byte Order:                           Little Endian
+CPU(s):                               32
+On-line CPU(s) list:                  0-31
+Vendor ID:                            GenuineIntel
+Model name:                           Intel(R) Core(TM) i9-14900K
+CPU family:                           6
+Model:                                183
+Thread(s) per core:                   2
+Core(s) per socket:                   16
+Socket(s):                            1
+Stepping:                             1
+BogoMIPS:                             6374.39
+Flags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid pni pclmulqdq vmx ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves avx_vnni umip waitpkg gfni vaes vpclmulqdq rdpid movdiri movdir64b fsrm md_clear serialize flush_l1d arch_capabilities
+Virtualization:                       VT-x
+Hypervisor vendor:                    Microsoft
+Virtualization type:                  full
+L1d cache:                            768 KiB (16 instances)
+L1i cache:                            512 KiB (16 instances)
+L2 cache:                             32 MiB (16 instances)
+L3 cache:                             36 MiB (1 instance)
+Vulnerability Gather data sampling:   Not affected
+Vulnerability Itlb multihit:          Not affected
+Vulnerability L1tf:                   Not affected
+Vulnerability Mds:                    Not affected
+Vulnerability Meltdown:               Not affected
+Vulnerability Mmio stale data:        Not affected
+Vulnerability Reg file data sampling: Mitigation; Clear Register File
+Vulnerability Retbleed:               Mitigation; Enhanced IBRS
+Vulnerability Spec rstack overflow:   Not affected
+Vulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl and seccomp
+Vulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:             Mitigation; Enhanced / Automatic IBRS; IBPB conditional; RSB filling; PBRSB-eIBRS SW sequence; BHI BHI_DIS_S
+Vulnerability Srbds:                  Not affected
+Vulnerability Tsx async abort:        Not affected
+
+Versions of relevant libraries:
+[pip3] numpy==1.26.4
+[pip3] pytorch3d==0.7.3
+[pip3] torch==2.0.0
+[pip3] torchaudio==2.0.1
+[pip3] torchdiffeq==0.2.5
+[pip3] torchvision==0.15.1
+[conda] libopenvino-pytorch-frontend            2024.4.0            h5888daf_0             https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+[conda] numpy                                   1.26.4              pypi_0                 pypi
+[conda] pytorch3d                               0.7.3               pypi_0                 pypi
+[conda] torch                                   2.0.0               pypi_0                 pypi
+[conda] torchaudio                              2.0.1               pypi_0                 pypi
+[conda] torchdiffeq                             0.2.5               pypi_0                 pypi
+[conda] torchvision                             0.15.1              pypi_0                 pypi
+[2025-11-27 22:44:49 base_trainer.py line 33]=>INFO: Loading trainer: StyleEncoderTrainer
+[2025-11-27 22:44:49 base_trainer.py line 77]=>INFO: Setting fixed seed: 2025
+[2025-11-27 22:44:49 base_dataset.py line 19]=>INFO: Loading dataset: HDTF_TFHP
+[2025-11-27 22:45:08 base_datamanager.py line 105]=>INFO: Dataset summary:
+-------  ---------
+Dataset  HDTF_TFHP
+# train  875
+# val    118
+# test   120
+-------  ---------
+[2025-11-27 22:45:08 diffposetalk_trainer.py line 57]=>INFO: Building model StyleEncoder ...
+[2025-11-27 22:45:08 diffposetalk_trainer.py line 65]=>INFO: Params: total 800,128, trainable 800,128
+[2025-11-27 22:45:08 diffposetalk_trainer.py line 68]=>INFO: Model Structure:
+StyleEncoder(
+  (PE): PositionalEncoding(
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+  (encoder): ModuleDict(
+    (motion_proj): Linear(in_features=54, out_features=128, bias=True)
+    (transformer): TransformerEncoder(
+      (layers): ModuleList(
+        (0-3): 4 x TransformerEncoderLayer(
+          (self_attn): MultiheadAttention(
+            (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
+          )
+          (linear1): Linear(in_features=128, out_features=512, bias=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+          (linear2): Linear(in_features=512, out_features=128, bias=True)
+          (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+          (dropout1): Dropout(p=0.1, inplace=False)
+          (dropout2): Dropout(p=0.1, inplace=False)
+        )
+      )
+    )
+  )
+)
+[2025-11-27 22:45:08 diffposetalk_trainer.py line 70]=>INFO: Building optimizer ...
+[2025-11-27 22:45:08 base_evaluator.py line 14]=>INFO: Loading evaluator: TDTalkerEvaluator
+[2025-11-27 22:45:08 TalkerEvaluator.py line 79]=>INFO: Loaded FLAME model for loss computation.
+[2025-11-27 22:45:08 base_trainer.py line 836]=>WARNING: No checkpoint found, train from scratch
+[2025-11-27 22:45:08 base_trainer.py line 157]=>INFO: Initialize tensorboard (log_dir=output/HDTF_TFHP/StyleEncoderTrainer/Eval/tensorboard)
+[2025-11-27 22:45:09 diffposetalk_trainer.py line 106]=>INFO: iter [5/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0557 lr 9.9846e-05 eta 0:00:01
+[2025-11-27 22:45:09 diffposetalk_trainer.py line 106]=>INFO: iter [10/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0319 lr 9.9384e-05 eta 0:00:02
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 106]=>INFO: iter [15/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0171 lr 9.8618e-05 eta 0:00:02
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 106]=>INFO: iter [20/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0082 lr 9.7553e-05 eta 0:00:01
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.007349528186023235 
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0071757012512534855 
+[2025-11-27 22:45:10 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.007255233079195023 
+[2025-11-27 22:45:11 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.007209408469498158 
+[2025-11-27 22:45:11 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0072544125840067865 
+[2025-11-27 22:45:11 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.007224845311914881 
+[2025-11-27 22:45:11 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.007232843206397124 
+[2025-11-27 22:45:11 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.007216476660687476 
+[2025-11-27 22:45:12 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.007213502056482766 
+[2025-11-27 22:45:12 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.007214743373915553 
+[2025-11-27 22:45:12 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0071819825013252825 
+[2025-11-27 22:45:12 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.007214727229438722 
+[2025-11-27 22:45:13 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.007192622934683011 
+[2025-11-27 22:45:13 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0072133410256356 
+[2025-11-27 22:45:13 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.00721030888458093 
+[2025-11-27 22:45:13 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0072175709472503515 
+[2025-11-27 22:45:13 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.007215291842379991 
+[2025-11-27 22:45:14 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.007218967978325155 
+[2025-11-27 22:45:14 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0072307783865222805 
+[2025-11-27 22:45:14 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.007214896408841014 
+[2025-11-27 22:45:14 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.007219317315944603 
+[2025-11-27 22:45:15 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.007219952734356576 
+[2025-11-27 22:45:15 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0072219713226608605 
+[2025-11-27 22:45:15 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.007220622070599347 
+[2025-11-27 22:45:15 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.007210964553058147 
+[2025-11-27 22:45:15 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.007226370808740075 
+[2025-11-27 22:45:16 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.007221342271400822 
+[2025-11-27 22:45:16 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.007225815595925919 
+[2025-11-27 22:45:16 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.007214981510207571 
+[2025-11-27 22:45:16 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.007231940310448408 
+[2025-11-27 22:45:17 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.007226886657337027 
+[2025-11-27 22:45:17 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.00723131958511658 
+[2025-11-27 22:45:17 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.007229845841048342 
+[2025-11-27 22:45:17 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.007228892543079222 
+[2025-11-27 22:45:18 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.007231431850897414 
+[2025-11-27 22:45:18 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.007226516029590534 
+[2025-11-27 22:45:18 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.007237758039421327 
+[2025-11-27 22:45:19 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.007225177718914653 
+[2025-11-27 22:45:19 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.007231806139819897 
+[2025-11-27 22:45:19 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.007225986015982926 
+[2025-11-27 22:45:19 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.007230298936639617 
+[2025-11-27 22:45:20 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0072238250724261715 
+[2025-11-27 22:45:20 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.007215520839185216 
+[2025-11-27 22:45:20 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.007223282307809727 
+[2025-11-27 22:45:20 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0072174332642720804 
+[2025-11-27 22:45:21 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0072248918247287686 
+[2025-11-27 22:45:21 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.007220473937056166 
+[2025-11-27 22:45:21 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0072262619428026175 
+[2025-11-27 22:45:21 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0072265233008229 
+[2025-11-27 22:45:22 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.007227366438135505 
+[2025-11-27 22:45:22 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.007224914698185874 
+[2025-11-27 22:45:22 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.007229252363770054 
+[2025-11-27 22:45:23 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.007224483543760934 
+[2025-11-27 22:45:23 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0072295033786859775 
+[2025-11-27 22:45:23 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0072285786338827825 
+[2025-11-27 22:45:23 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.007228951081300953 
+[2025-11-27 22:45:24 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.007234598152143391 
+[2025-11-27 22:45:24 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0072280498735349755 
+[2025-11-27 22:45:24 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.00723127081863961 
+[2025-11-27 22:45:24 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.007226564204320312 
+[2025-11-27 22:45:25 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.007229466434018534 
+[2025-11-27 22:45:25 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.007225707907890601 
+[2025-11-27 22:45:25 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.007223831120109748 
+[2025-11-27 22:45:25 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.007223782947403379 
+[2025-11-27 22:45:26 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0072262063665458785 
+[2025-11-27 22:45:26 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.007225811904804273 
+[2025-11-27 22:45:26 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0072230783054855335 
+[2025-11-27 22:45:26 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.007226811853401801 
+[2025-11-27 22:45:27 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.007224615636295167 
+[2025-11-27 22:45:27 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.00722838245332241 
+[2025-11-27 22:45:27 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.007229616778942061 
+[2025-11-27 22:45:27 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.007226392692731073 
+[2025-11-27 22:45:28 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.007227666695181229 
+[2025-11-27 22:45:28 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.007225477472702796 
+[2025-11-27 22:45:28 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.007225908447057009 
+[2025-11-27 22:45:29 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0072251786122490705 
+[2025-11-27 22:45:29 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0072278656839550315 
+[2025-11-27 22:45:29 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.007224804582074284 
+[2025-11-27 22:45:29 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.007219994601003732 
+[2025-11-27 22:45:30 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.007225634455680847 
+[2025-11-27 22:45:30 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-20
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 106]=>INFO: iter [25/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0046 lr 9.6194e-05 eta 0:00:01
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 106]=>INFO: iter [30/200] time 0.015 (0.015) data 0.001 (0.001) loss 0.0037 lr 9.4550e-05 eta 0:00:02
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 106]=>INFO: iter [35/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0030 lr 9.2632e-05 eta 0:00:01
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 106]=>INFO: iter [40/200] time 0.013 (0.013) data 0.000 (0.000) loss 0.0032 lr 9.0451e-05 eta 0:00:02
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0017163073411211372 
+[2025-11-27 22:45:33 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.001796903635840863 
+[2025-11-27 22:45:34 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.001791111077181995 
+[2025-11-27 22:45:34 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0017854757956229151 
+[2025-11-27 22:45:34 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0017871968541294336 
+[2025-11-27 22:45:34 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0017842620921631653 
+[2025-11-27 22:45:34 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.001771400117182306 
+[2025-11-27 22:45:35 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0017859087092801929 
+[2025-11-27 22:45:35 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0017909099037448565 
+[2025-11-27 22:45:35 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0017849712655879557 
+[2025-11-27 22:45:35 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0017855140825056217 
+[2025-11-27 22:45:36 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0017813526947672168 
+[2025-11-27 22:45:36 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0017766207492408844 
+[2025-11-27 22:45:36 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0017842330870085528 
+[2025-11-27 22:45:37 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0017879753730570276 
+[2025-11-27 22:45:37 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0017824444847065024 
+[2025-11-27 22:45:37 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0017801405903061524 
+[2025-11-27 22:45:37 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.001783315398885558 
+[2025-11-27 22:45:38 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.001779293641448021 
+[2025-11-27 22:45:38 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.001783670492004603 
+[2025-11-27 22:45:38 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0017811558785892669 
+[2025-11-27 22:45:38 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0017849620780907571 
+[2025-11-27 22:45:39 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.001782202438208396 
+[2025-11-27 22:45:39 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0017858488300892836 
+[2025-11-27 22:45:39 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0017865729918703436 
+[2025-11-27 22:45:39 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0017849499879118342 
+[2025-11-27 22:45:40 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.001788841031871184 
+[2025-11-27 22:45:40 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0017837564144948764 
+[2025-11-27 22:45:40 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0017847438302726068 
+[2025-11-27 22:45:41 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0017843374640991291 
+[2025-11-27 22:45:41 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.001785875083277783 
+[2025-11-27 22:45:41 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0017834282749390694 
+[2025-11-27 22:45:41 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0017838965282973014 
+[2025-11-27 22:45:42 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0017837833161191904 
+[2025-11-27 22:45:42 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.001784300433604845 
+[2025-11-27 22:45:42 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0017824211293676246 
+[2025-11-27 22:45:42 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0017835773017911894 
+[2025-11-27 22:45:42 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0017829667801331534 
+[2025-11-27 22:45:43 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0017822896416943806 
+[2025-11-27 22:45:43 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.001782919695833698 
+[2025-11-27 22:45:43 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0017844229709447885 
+[2025-11-27 22:45:43 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0017823025157364706 
+[2025-11-27 22:45:44 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0017831163036875254 
+[2025-11-27 22:45:44 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.001782507374776866 
+[2025-11-27 22:45:44 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0017833130718726252 
+[2025-11-27 22:45:44 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0017824209573597688 
+[2025-11-27 22:45:45 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0017829697906099101 
+[2025-11-27 22:45:45 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0017816387975472026 
+[2025-11-27 22:45:45 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0017798472319406513 
+[2025-11-27 22:45:45 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0017820131136104464 
+[2025-11-27 22:45:46 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0017802755508170116 
+[2025-11-27 22:45:46 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.001782139253247386 
+[2025-11-27 22:45:46 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0017833975833436509 
+[2025-11-27 22:45:46 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.001782195837047227 
+[2025-11-27 22:45:46 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0017814079612832178 
+[2025-11-27 22:45:47 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.001782280016673862 
+[2025-11-27 22:45:47 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0017820403322969611 
+[2025-11-27 22:45:47 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.00178214637642919 
+[2025-11-27 22:45:47 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0017821908486470328 
+[2025-11-27 22:45:48 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0017822653943827997 
+[2025-11-27 22:45:48 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0017825930157951155 
+[2025-11-27 22:45:48 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0017822589612595976 
+[2025-11-27 22:45:48 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.001782705568309341 
+[2025-11-27 22:45:49 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0017826070248702307 
+[2025-11-27 22:45:49 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0017833744190060175 
+[2025-11-27 22:45:49 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0017828080609130362 
+[2025-11-27 22:45:49 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0017836299346092699 
+[2025-11-27 22:45:50 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0017830968865275602 
+[2025-11-27 22:45:50 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0017827149591935069 
+[2025-11-27 22:45:50 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.001783222890392478 
+[2025-11-27 22:45:50 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0017823859737713782 
+[2025-11-27 22:45:51 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.001782996683484978 
+[2025-11-27 22:45:51 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0017825682255222578 
+[2025-11-27 22:45:51 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0017831613775342702 
+[2025-11-27 22:45:51 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.00178377028927207 
+[2025-11-27 22:45:52 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0017832224321625146 
+[2025-11-27 22:45:52 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0017825304191898216 
+[2025-11-27 22:45:52 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0017833683884535463 
+[2025-11-27 22:45:52 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0017835462247787774 
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.001783555097936187 
+[2025-11-27 22:45:53 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-40
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 106]=>INFO: iter [45/200] time 0.017 (0.017) data 0.000 (0.000) loss 0.0023 lr 8.8020e-05 eta 0:00:02
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 106]=>INFO: iter [50/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0022 lr 8.5355e-05 eta 0:00:01
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 106]=>INFO: iter [55/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0022 lr 8.2472e-05 eta 0:00:01
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 106]=>INFO: iter [60/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0016 lr 7.9389e-05 eta 0:00:01
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:45:53 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0010985151981003582 
+[2025-11-27 22:45:54 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.001179213059367612 
+[2025-11-27 22:45:54 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.0011774180689826607 
+[2025-11-27 22:45:54 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0011774195940233768 
+[2025-11-27 22:45:54 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0011793417762964965 
+[2025-11-27 22:45:55 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0011746738920919598 
+[2025-11-27 22:45:55 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0011777584441006184 
+[2025-11-27 22:45:55 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0011746634510927834 
+[2025-11-27 22:45:55 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0011696493214306731 
+[2025-11-27 22:45:55 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.001174655641661957 
+[2025-11-27 22:45:56 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0011700645099732686 
+[2025-11-27 22:45:56 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0011733421803607296 
+[2025-11-27 22:45:56 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0011739613989797922 
+[2025-11-27 22:45:56 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0011714114491561693 
+[2025-11-27 22:45:57 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0011727530152226488 
+[2025-11-27 22:45:57 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0011707518497132696 
+[2025-11-27 22:45:57 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0011731056975858177 
+[2025-11-27 22:45:57 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0011693695844668481 
+[2025-11-27 22:45:58 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0011673545134008715 
+[2025-11-27 22:45:58 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0011692179017700256 
+[2025-11-27 22:45:58 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0011685973166355064 
+[2025-11-27 22:45:58 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0011682654995555904 
+[2025-11-27 22:45:59 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0011663021853841517 
+[2025-11-27 22:45:59 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0011674197487688313 
+[2025-11-27 22:45:59 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0011693781930953264 
+[2025-11-27 22:45:59 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.001166836563229131 
+[2025-11-27 22:46:00 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0011640609336878967 
+[2025-11-27 22:46:00 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0011669034857602258 
+[2025-11-27 22:46:00 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0011676538402439448 
+[2025-11-27 22:46:00 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0011660080511743823 
+[2025-11-27 22:46:01 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0011669125768446152 
+[2025-11-27 22:46:01 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0011664476209261921 
+[2025-11-27 22:46:01 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0011669090652669017 
+[2025-11-27 22:46:02 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0011659261568531614 
+[2025-11-27 22:46:02 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.001166126730718783 
+[2025-11-27 22:46:02 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0011656660010986445 
+[2025-11-27 22:46:02 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0011652589284789723 
+[2025-11-27 22:46:03 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0011659245656215048 
+[2025-11-27 22:46:03 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0011668596709242616 
+[2025-11-27 22:46:03 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0011660318728536367 
+[2025-11-27 22:46:04 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0011646799538738845 
+[2025-11-27 22:46:04 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0011661982668253283 
+[2025-11-27 22:46:04 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.001166096410909018 
+[2025-11-27 22:46:04 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0011661723256111145 
+[2025-11-27 22:46:07 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0011658786793446376 
+[2025-11-27 22:46:07 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0011663286782214012 
+[2025-11-27 22:46:08 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0011677458547947413 
+[2025-11-27 22:46:08 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0011664029366026322 
+[2025-11-27 22:46:08 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0011662407234140045 
+[2025-11-27 22:46:08 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0011668111914768815 
+[2025-11-27 22:46:09 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0011655101575432163 
+[2025-11-27 22:46:09 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0011667272626744727 
+[2025-11-27 22:46:09 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0011669267289656795 
+[2025-11-27 22:46:09 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0011663609848323244 
+[2025-11-27 22:46:10 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0011659041127528656 
+[2025-11-27 22:46:10 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0011664925995449136 
+[2025-11-27 22:46:10 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.001166322420906733 
+[2025-11-27 22:46:11 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0011664338767175273 
+[2025-11-27 22:46:11 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0011658456257418177 
+[2025-11-27 22:46:11 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0011663181635473544 
+[2025-11-27 22:46:12 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0011664495316761562 
+[2025-11-27 22:46:12 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.001166255779061166 
+[2025-11-27 22:46:12 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0011671285460969167 
+[2025-11-27 22:46:12 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0011663826206131489 
+[2025-11-27 22:46:13 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0011673605665922738 
+[2025-11-27 22:46:13 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.001166400648159624 
+[2025-11-27 22:46:13 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0011665883522703133 
+[2025-11-27 22:46:14 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0011662780255873634 
+[2025-11-27 22:46:14 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.001166391716527658 
+[2025-11-27 22:46:14 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.00116637715970033 
+[2025-11-27 22:46:14 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0011660709773833064 
+[2025-11-27 22:46:15 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0011665023274771455 
+[2025-11-27 22:46:15 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0011670237949296628 
+[2025-11-27 22:46:15 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0011662472799307089 
+[2025-11-27 22:46:15 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0011658184554738302 
+[2025-11-27 22:46:16 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0011664166174963802 
+[2025-11-27 22:46:16 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0011662122903863428 
+[2025-11-27 22:46:16 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0011664747202303261 
+[2025-11-27 22:46:16 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.001166520348184188 
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0011665342381456867 
+[2025-11-27 22:46:17 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-60
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 106]=>INFO: iter [65/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0017 lr 7.6125e-05 eta 0:00:01
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 106]=>INFO: iter [70/200] time 0.013 (0.013) data 0.000 (0.000) loss 0.0017 lr 7.2700e-05 eta 0:00:01
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 106]=>INFO: iter [75/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0017 lr 6.9134e-05 eta 0:00:01
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 106]=>INFO: iter [80/200] time 0.009 (0.009) data 0.000 (0.000) loss 0.0015 lr 6.5451e-05 eta 0:00:01
+[2025-11-27 22:46:17 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:46:18 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0010184822604060173 
+[2025-11-27 22:46:18 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0009957431408111005 
+[2025-11-27 22:46:18 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.000990991290503492 
+[2025-11-27 22:46:18 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0009974374988814816 
+[2025-11-27 22:46:19 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0009982779645361006 
+[2025-11-27 22:46:19 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0009961736272089184 
+[2025-11-27 22:46:19 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0009893597735624229 
+[2025-11-27 22:46:19 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0009960797338862903 
+[2025-11-27 22:46:20 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0009940871425593893 
+[2025-11-27 22:46:20 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0009950667014345528 
+[2025-11-27 22:46:20 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0009958278334868903 
+[2025-11-27 22:46:20 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.000992690568091348 
+[2025-11-27 22:46:21 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0009954456598139725 
+[2025-11-27 22:46:21 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0009926739922125956 
+[2025-11-27 22:46:21 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0009939660434611143 
+[2025-11-27 22:46:21 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0009921859367750586 
+[2025-11-27 22:46:22 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.000990313243613962 
+[2025-11-27 22:46:22 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0009916896200997548 
+[2025-11-27 22:46:22 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0009916156009574862 
+[2025-11-27 22:46:22 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0009912352601531894 
+[2025-11-27 22:46:23 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0009923274833930746 
+[2025-11-27 22:46:23 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.000991247235056521 
+[2025-11-27 22:46:23 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.000989793096770249 
+[2025-11-27 22:46:23 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0009904374213268359 
+[2025-11-27 22:46:24 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0009897713023237884 
+[2025-11-27 22:46:24 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.000990854532798179 
+[2025-11-27 22:46:24 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.000991475813228775 
+[2025-11-27 22:46:24 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0009909703654037523 
+[2025-11-27 22:46:25 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0009905196393133495 
+[2025-11-27 22:46:25 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0009916306640176723 
+[2025-11-27 22:46:25 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0009911426808685065 
+[2025-11-27 22:46:26 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0009917164967191638 
+[2025-11-27 22:46:26 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0009905490361041191 
+[2025-11-27 22:46:26 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0009913952148053796 
+[2025-11-27 22:46:27 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0009908189687744848 
+[2025-11-27 22:46:27 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0009911830126333775 
+[2025-11-27 22:46:27 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0009921845353862925 
+[2025-11-27 22:46:27 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0009913146863446424 
+[2025-11-27 22:46:28 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0009902549415038756 
+[2025-11-27 22:46:28 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0009911470711813307 
+[2025-11-27 22:46:28 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0009919397882185877 
+[2025-11-27 22:46:28 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0009911345470408422 
+[2025-11-27 22:46:29 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.000990647007169765 
+[2025-11-27 22:46:29 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.000991507688939402 
+[2025-11-27 22:46:29 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0009906251280982462 
+[2025-11-27 22:46:29 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.000991697500348496 
+[2025-11-27 22:46:30 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0009922414433528135 
+[2025-11-27 22:46:30 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.000991404136827138 
+[2025-11-27 22:46:30 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0009904195580688515 
+[2025-11-27 22:46:31 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0009911607906688004 
+[2025-11-27 22:46:31 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0009902876774396966 
+[2025-11-27 22:46:31 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0009910816615536953 
+[2025-11-27 22:46:31 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0009915520619372573 
+[2025-11-27 22:46:32 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0009912442446134433 
+[2025-11-27 22:46:32 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0009920850866050883 
+[2025-11-27 22:46:32 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0009912494542991875 
+[2025-11-27 22:46:32 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0009913934968624328 
+[2025-11-27 22:46:33 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0009913803907191574 
+[2025-11-27 22:46:33 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0009912634880076777 
+[2025-11-27 22:46:33 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0009912868756024788 
+[2025-11-27 22:46:33 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.00099168368653379 
+[2025-11-27 22:46:34 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.000991346188745792 
+[2025-11-27 22:46:34 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0009912799230761943 
+[2025-11-27 22:46:34 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0009912838901072973 
+[2025-11-27 22:46:34 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0009907826218897335 
+[2025-11-27 22:46:35 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.000991097951279671 
+[2025-11-27 22:46:35 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.000991256434797073 
+[2025-11-27 22:46:35 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0009912216950290125 
+[2025-11-27 22:46:36 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0009918474167099466 
+[2025-11-27 22:46:36 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0009912347460963897 
+[2025-11-27 22:46:36 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0009908324968345254 
+[2025-11-27 22:46:36 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0009913675404580621 
+[2025-11-27 22:46:37 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0009915331946303175 
+[2025-11-27 22:46:37 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0009913200827164424 
+[2025-11-27 22:46:37 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0009919330061723788 
+[2025-11-27 22:46:37 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0009912387261130405 
+[2025-11-27 22:46:38 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0009906096355203394 
+[2025-11-27 22:46:38 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0009912062496042404 
+[2025-11-27 22:46:38 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0009912694561224479 
+[2025-11-27 22:46:38 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.000991117500816472 
+[2025-11-27 22:46:38 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-80
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 106]=>INFO: iter [85/200] time 0.093 (0.093) data 0.071 (0.071) loss 0.0018 lr 6.1672e-05 eta 0:00:10
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 106]=>INFO: iter [90/200] time 0.015 (0.015) data 0.000 (0.000) loss 0.0017 lr 5.7822e-05 eta 0:00:01
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 106]=>INFO: iter [95/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0018 lr 5.3923e-05 eta 0:00:01
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 106]=>INFO: iter [100/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0016 lr 5.0000e-05 eta 0:00:01
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:46:39 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008940338157117367 
+[2025-11-27 22:46:42 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0009043353900779038 
+[2025-11-27 22:46:42 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.0008938444157441457 
+[2025-11-27 22:46:42 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0009044901875313371 
+[2025-11-27 22:46:43 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0008977470197714865 
+[2025-11-27 22:46:43 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0009039366365565608 
+[2025-11-27 22:46:43 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0009003901621326804 
+[2025-11-27 22:46:43 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0009050331878825091 
+[2025-11-27 22:46:44 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0009035304550909334 
+[2025-11-27 22:46:44 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0009034596697892993 
+[2025-11-27 22:46:44 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0009026637650094927 
+[2025-11-27 22:46:44 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.000902859543566592 
+[2025-11-27 22:46:45 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0009030128479935229 
+[2025-11-27 22:46:45 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0009029011965529727 
+[2025-11-27 22:46:45 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0009022827834511797 
+[2025-11-27 22:46:46 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0009027439897181466 
+[2025-11-27 22:46:46 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.000901352012228659 
+[2025-11-27 22:46:46 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0009022125392220915 
+[2025-11-27 22:46:47 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0009038952485609211 
+[2025-11-27 22:46:47 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0009016699314815924 
+[2025-11-27 22:46:47 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0009031878401791411 
+[2025-11-27 22:46:47 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0009015603382563726 
+[2025-11-27 22:46:48 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0009037722059039642 
+[2025-11-27 22:46:48 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0009019907830709902 
+[2025-11-27 22:46:48 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0009023138214834034 
+[2025-11-27 22:46:48 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0009020404312580537 
+[2025-11-27 22:46:49 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0009007309761795181 
+[2025-11-27 22:46:49 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.000902232969279534 
+[2025-11-27 22:46:49 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0009031901469229367 
+[2025-11-27 22:46:50 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0009020998608320951 
+[2025-11-27 22:46:50 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0009009341089685838 
+[2025-11-27 22:46:50 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0009018714506964897 
+[2025-11-27 22:46:50 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0009025521029605333 
+[2025-11-27 22:46:51 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0009019168692997055 
+[2025-11-27 22:46:51 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0009031799309221762 
+[2025-11-27 22:46:51 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0009019731055660587 
+[2025-11-27 22:46:51 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0009017953192941039 
+[2025-11-27 22:46:52 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0009018006587499066 
+[2025-11-27 22:46:52 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0009008125733369245 
+[2025-11-27 22:46:52 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.000902195415692404 
+[2025-11-27 22:46:52 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.000903460651738342 
+[2025-11-27 22:46:53 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.000902220712686401 
+[2025-11-27 22:46:53 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0009010646695292793 
+[2025-11-27 22:46:53 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0009022163179576058 
+[2025-11-27 22:46:54 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0009026037593786087 
+[2025-11-27 22:46:54 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0009020051083770459 
+[2025-11-27 22:46:54 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0009021645424233631 
+[2025-11-27 22:46:54 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0009022873438273867 
+[2025-11-27 22:46:55 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0009023837410198638 
+[2025-11-27 22:46:55 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0009019921778235584 
+[2025-11-27 22:46:55 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0009014782721779364 
+[2025-11-27 22:46:55 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0009017863702655842 
+[2025-11-27 22:46:56 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0009011514625459347 
+[2025-11-27 22:46:56 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0009018766441537689 
+[2025-11-27 22:46:56 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.00090179041641849 
+[2025-11-27 22:46:56 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0009019349260987447 
+[2025-11-27 22:46:57 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.000901921663082025 
+[2025-11-27 22:46:57 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0009019880354854054 
+[2025-11-27 22:46:57 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0009022146773177309 
+[2025-11-27 22:46:58 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0009022104945809891 
+[2025-11-27 22:46:58 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0009022841312098088 
+[2025-11-27 22:46:58 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0009020916178762432 
+[2025-11-27 22:46:58 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0009020114709283151 
+[2025-11-27 22:46:59 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0009022147352879984 
+[2025-11-27 22:46:59 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0009028491444097688 
+[2025-11-27 22:46:59 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0009020428166188525 
+[2025-11-27 22:47:00 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0009018765939677606 
+[2025-11-27 22:47:00 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0009022859632215627 
+[2025-11-27 22:47:00 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0009018702587733666 
+[2025-11-27 22:47:00 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0009023137059661427 
+[2025-11-27 22:47:01 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0009024410477419659 
+[2025-11-27 22:47:01 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0009022874547453183 
+[2025-11-27 22:47:01 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0009017922035227083 
+[2025-11-27 22:47:01 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0009022828111286602 
+[2025-11-27 22:47:02 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0009025447526946664 
+[2025-11-27 22:47:02 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0009023036311478599 
+[2025-11-27 22:47:02 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0009026273540765434 
+[2025-11-27 22:47:03 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.000902251582682276 
+[2025-11-27 22:47:03 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0009026377984982785 
+[2025-11-27 22:47:03 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0009022259245102759 
+[2025-11-27 22:47:03 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-100
+[2025-11-27 22:47:03 diffposetalk_trainer.py line 106]=>INFO: iter [105/200] time 0.015 (0.015) data 0.000 (0.000) loss 0.0017 lr 4.6077e-05 eta 0:00:01
+[2025-11-27 22:47:03 diffposetalk_trainer.py line 106]=>INFO: iter [110/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0020 lr 4.2178e-05 eta 0:00:01
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 106]=>INFO: iter [115/200] time 0.013 (0.013) data 0.000 (0.000) loss 0.0015 lr 3.8328e-05 eta 0:00:01
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 106]=>INFO: iter [120/200] time 0.019 (0.019) data 0.000 (0.000) loss 0.0016 lr 3.4549e-05 eta 0:00:01
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008672453695908189 
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0008589782984927297 
+[2025-11-27 22:47:04 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.00087048492860049 
+[2025-11-27 22:47:05 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0008569331490434706 
+[2025-11-27 22:47:05 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0008538051671348512 
+[2025-11-27 22:47:05 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0008558675879612565 
+[2025-11-27 22:47:05 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0008534662508671837 
+[2025-11-27 22:47:06 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0008561459559132345 
+[2025-11-27 22:47:06 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0008580151026965015 
+[2025-11-27 22:47:06 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.000856345408828929 
+[2025-11-27 22:47:06 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0008540869499980048 
+[2025-11-27 22:47:07 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0008549158024834469 
+[2025-11-27 22:47:07 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0008542615848665054 
+[2025-11-27 22:47:07 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0008557505356813115 
+[2025-11-27 22:47:07 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0008576838842903574 
+[2025-11-27 22:47:08 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0008559997295378707 
+[2025-11-27 22:47:08 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0008560664486140013 
+[2025-11-27 22:47:08 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0008553264804908798 
+[2025-11-27 22:47:08 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.000855740149333877 
+[2025-11-27 22:47:09 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0008540018013445661 
+[2025-11-27 22:47:09 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0008544619217337597 
+[2025-11-27 22:47:09 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0008539377034387806 
+[2025-11-27 22:47:09 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0008564770191340991 
+[2025-11-27 22:47:10 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0008539996434895632 
+[2025-11-27 22:47:10 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.000854049748275429 
+[2025-11-27 22:47:10 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0008545440957487489 
+[2025-11-27 22:47:11 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0008549875666007951 
+[2025-11-27 22:47:11 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0008543510700941884 
+[2025-11-27 22:47:11 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0008531273836430548 
+[2025-11-27 22:47:11 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0008548489073291421 
+[2025-11-27 22:47:12 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0008539360024095062 
+[2025-11-27 22:47:12 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0008545858687284636 
+[2025-11-27 22:47:12 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0008553468512907398 
+[2025-11-27 22:47:12 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0008542669053627726 
+[2025-11-27 22:47:13 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0008548667355041419 
+[2025-11-27 22:47:13 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0008538044791849744 
+[2025-11-27 22:47:13 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0008542945127103578 
+[2025-11-27 22:47:13 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0008538926636040407 
+[2025-11-27 22:47:14 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0008533466514796974 
+[2025-11-27 22:47:14 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0008540452501620166 
+[2025-11-27 22:47:17 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0008535399215250481 
+[2025-11-27 22:47:17 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0008543127075037254 
+[2025-11-27 22:47:17 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0008547464304408709 
+[2025-11-27 22:47:17 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0008544061343524267 
+[2025-11-27 22:47:18 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.000854036975134578 
+[2025-11-27 22:47:18 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.000854418364495201 
+[2025-11-27 22:47:18 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0008549954630731744 
+[2025-11-27 22:47:19 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0008545834238854392 
+[2025-11-27 22:47:19 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0008548610945878437 
+[2025-11-27 22:47:19 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0008542531407438219 
+[2025-11-27 22:47:19 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0008545453952369736 
+[2025-11-27 22:47:20 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0008541010465705767 
+[2025-11-27 22:47:20 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0008543913041786203 
+[2025-11-27 22:47:20 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0008540027613182449 
+[2025-11-27 22:47:21 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0008535325931469825 
+[2025-11-27 22:47:21 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.000854130374084759 
+[2025-11-27 22:47:21 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0008538724033554134 
+[2025-11-27 22:47:21 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0008542489236349176 
+[2025-11-27 22:47:22 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0008544003439009568 
+[2025-11-27 22:47:22 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.000854025719454512 
+[2025-11-27 22:47:22 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0008544492581095852 
+[2025-11-27 22:47:23 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0008538786303101769 
+[2025-11-27 22:47:23 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0008541754140178599 
+[2025-11-27 22:47:23 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0008539723536159727 
+[2025-11-27 22:47:23 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0008544475689100531 
+[2025-11-27 22:47:24 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0008538658520785358 
+[2025-11-27 22:47:24 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0008538034313650273 
+[2025-11-27 22:47:24 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0008537841233192012 
+[2025-11-27 22:47:25 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0008542207192859032 
+[2025-11-27 22:47:25 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0008538442010259522 
+[2025-11-27 22:47:25 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0008539880827580854 
+[2025-11-27 22:47:25 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0008536954615717857 
+[2025-11-27 22:47:26 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0008531648361073067 
+[2025-11-27 22:47:26 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0008536619755653413 
+[2025-11-27 22:47:26 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0008534514862112701 
+[2025-11-27 22:47:26 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0008536939063464831 
+[2025-11-27 22:47:27 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.000853704224497854 
+[2025-11-27 22:47:27 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0008540031713588785 
+[2025-11-27 22:47:27 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0008538724556918951 
+[2025-11-27 22:47:27 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0008539816648408305 
+[2025-11-27 22:47:27 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-120
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 106]=>INFO: iter [125/200] time 0.014 (0.014) data 0.000 (0.000) loss 0.0015 lr 3.0866e-05 eta 0:00:01
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 106]=>INFO: iter [130/200] time 0.015 (0.015) data 0.000 (0.000) loss 0.0013 lr 2.7300e-05 eta 0:00:01
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 106]=>INFO: iter [135/200] time 0.016 (0.016) data 0.000 (0.000) loss 0.0017 lr 2.3875e-05 eta 0:00:01
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 106]=>INFO: iter [140/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0010 lr 2.0611e-05 eta 0:00:00
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008049506461247802 
+[2025-11-27 22:47:28 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0008341455017216503 
+[2025-11-27 22:47:29 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.000836264924146235 
+[2025-11-27 22:47:29 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0008330868586199358 
+[2025-11-27 22:47:29 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0008363708411343396 
+[2025-11-27 22:47:29 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0008277998752115915 
+[2025-11-27 22:47:30 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0008281915265667652 
+[2025-11-27 22:47:30 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0008256976754637436 
+[2025-11-27 22:47:30 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0008284543007094827 
+[2025-11-27 22:47:30 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0008263293199706822 
+[2025-11-27 22:47:31 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0008275537836280736 
+[2025-11-27 22:47:31 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0008258616803990056 
+[2025-11-27 22:47:31 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.000823022061600708 
+[2025-11-27 22:47:31 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0008252125823803778 
+[2025-11-27 22:47:32 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0008254759300810596 
+[2025-11-27 22:47:32 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0008254911714175251 
+[2025-11-27 22:47:32 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0008245766744948924 
+[2025-11-27 22:47:32 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0008256259050944613 
+[2025-11-27 22:47:33 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0008273498437024261 
+[2025-11-27 22:47:33 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0008255735033890232 
+[2025-11-27 22:47:33 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0008239652296262128 
+[2025-11-27 22:47:33 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0008256949002812193 
+[2025-11-27 22:47:34 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0008243335795629284 
+[2025-11-27 22:47:34 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0008260128107698013 
+[2025-11-27 22:47:34 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0008263842784799636 
+[2025-11-27 22:47:34 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0008257714350922749 
+[2025-11-27 22:47:35 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0008246352960769501 
+[2025-11-27 22:47:35 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0008252581602261801 
+[2025-11-27 22:47:35 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0008252763775466331 
+[2025-11-27 22:47:36 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0008253898824720333 
+[2025-11-27 22:47:36 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0008238839530085604 
+[2025-11-27 22:47:36 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0008255201057181694 
+[2025-11-27 22:47:37 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0008261090056321612 
+[2025-11-27 22:47:37 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0008254985283950672 
+[2025-11-27 22:47:37 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0008247830273051347 
+[2025-11-27 22:47:37 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0008255568740423769 
+[2025-11-27 22:47:38 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0008265789374834984 
+[2025-11-27 22:47:38 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0008254836080595851 
+[2025-11-27 22:47:38 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0008263920762170201 
+[2025-11-27 22:47:38 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0008257520047482103 
+[2025-11-27 22:47:39 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.000826442676664489 
+[2025-11-27 22:47:39 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0008259091238003402 
+[2025-11-27 22:47:39 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.000825541413410805 
+[2025-11-27 22:47:39 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0008261195164364339 
+[2025-11-27 22:47:40 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0008268381142988801 
+[2025-11-27 22:47:40 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0008258494118269047 
+[2025-11-27 22:47:40 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.000825619017903475 
+[2025-11-27 22:47:40 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0008261645113331421 
+[2025-11-27 22:47:41 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0008262262601234323 
+[2025-11-27 22:47:41 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0008260057484731078 
+[2025-11-27 22:47:41 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0008259170223027468 
+[2025-11-27 22:47:41 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0008260164853149595 
+[2025-11-27 22:47:42 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0008261901238616907 
+[2025-11-27 22:47:42 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.000825691040760527 
+[2025-11-27 22:47:42 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0008256102382967418 
+[2025-11-27 22:47:42 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0008256672582189952 
+[2025-11-27 22:47:43 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0008254163686120719 
+[2025-11-27 22:47:43 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0008253707690967311 
+[2025-11-27 22:47:43 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0008254728599656689 
+[2025-11-27 22:47:43 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0008253360458184034 
+[2025-11-27 22:47:44 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0008256300264725187 
+[2025-11-27 22:47:44 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.000825306331370807 
+[2025-11-27 22:47:44 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.000825157803889837 
+[2025-11-27 22:47:44 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0008251086530435714 
+[2025-11-27 22:47:45 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0008246544658994445 
+[2025-11-27 22:47:45 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0008252099080533354 
+[2025-11-27 22:47:45 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.000825768550545144 
+[2025-11-27 22:47:45 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0008251642311841031 
+[2025-11-27 22:47:46 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0008248813796208064 
+[2025-11-27 22:47:46 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0008250771948535528 
+[2025-11-27 22:47:46 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0008244707175320618 
+[2025-11-27 22:47:46 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0008251478344189106 
+[2025-11-27 22:47:47 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.000825543748533787 
+[2025-11-27 22:47:47 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.000825317287534425 
+[2025-11-27 22:47:47 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.000825047991083314 
+[2025-11-27 22:47:47 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0008254947719825922 
+[2025-11-27 22:47:48 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0008256387556661162 
+[2025-11-27 22:47:48 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0008253755928494801 
+[2025-11-27 22:47:48 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0008247799629086181 
+[2025-11-27 22:47:48 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0008255476981867105 
+[2025-11-27 22:47:49 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-140
+[2025-11-27 22:47:49 diffposetalk_trainer.py line 106]=>INFO: iter [145/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0017 lr 1.7528e-05 eta 0:00:00
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 106]=>INFO: iter [150/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0015 lr 1.4645e-05 eta 0:00:00
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 106]=>INFO: iter [155/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0016 lr 1.1980e-05 eta 0:00:00
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 106]=>INFO: iter [160/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0016 lr 9.5492e-06 eta 0:00:00
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008219647104851901 
+[2025-11-27 22:47:52 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0008115112606901676 
+[2025-11-27 22:47:53 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.0008044912324597438 
+[2025-11-27 22:47:53 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.000810106418794021 
+[2025-11-27 22:47:53 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.000816659911070019 
+[2025-11-27 22:47:53 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0008095741446595639 
+[2025-11-27 22:47:54 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0008130953547411732 
+[2025-11-27 22:47:54 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0008099427068373188 
+[2025-11-27 22:47:54 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0008083768809835116 
+[2025-11-27 22:47:54 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0008104145980905741 
+[2025-11-27 22:47:55 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0008099944087338042 
+[2025-11-27 22:47:55 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0008101992920273915 
+[2025-11-27 22:47:55 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0008084764202626851 
+[2025-11-27 22:47:55 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0008107900602876075 
+[2025-11-27 22:47:56 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0008121716665724913 
+[2025-11-27 22:47:56 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0008107840090815444 
+[2025-11-27 22:47:56 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0008083299788482048 
+[2025-11-27 22:47:57 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0008108904539969647 
+[2025-11-27 22:47:57 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.000809531246532539 
+[2025-11-27 22:47:57 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0008103014243533835 
+[2025-11-27 22:47:57 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0008113466885073909 
+[2025-11-27 22:47:58 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0008106060971675271 
+[2025-11-27 22:47:58 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0008101842411712784 
+[2025-11-27 22:47:58 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0008113522669494463 
+[2025-11-27 22:47:58 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0008119910666719079 
+[2025-11-27 22:47:59 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0008109477684439088 
+[2025-11-27 22:47:59 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0008099189455000063 
+[2025-11-27 22:47:59 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0008113095890231696 
+[2025-11-27 22:48:00 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0008111976163365461 
+[2025-11-27 22:48:00 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0008114977569008867 
+[2025-11-27 22:48:00 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0008104757927808791 
+[2025-11-27 22:48:00 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0008117256900732172 
+[2025-11-27 22:48:01 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0008109058976653173 
+[2025-11-27 22:48:01 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0008115404309458373 
+[2025-11-27 22:48:01 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0008119023844067539 
+[2025-11-27 22:48:01 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0008114963278381361 
+[2025-11-27 22:48:02 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0008107262515664302 
+[2025-11-27 22:48:02 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0008113896851060226 
+[2025-11-27 22:48:02 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0008121998589605285 
+[2025-11-27 22:48:03 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0008112277393229305 
+[2025-11-27 22:48:03 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0008114213166508551 
+[2025-11-27 22:48:03 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0008109051601162978 
+[2025-11-27 22:48:03 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0008103229284156547 
+[2025-11-27 22:48:04 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.000811150295670483 
+[2025-11-27 22:48:04 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0008109560052657293 
+[2025-11-27 22:48:04 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0008110838967537426 
+[2025-11-27 22:48:04 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.000810787898607235 
+[2025-11-27 22:48:05 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0008107917582189354 
+[2025-11-27 22:48:05 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.000809882135292021 
+[2025-11-27 22:48:05 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0008107334154192358 
+[2025-11-27 22:48:05 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0008103808089086384 
+[2025-11-27 22:48:06 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.000810435080067971 
+[2025-11-27 22:48:06 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.000810332091103466 
+[2025-11-27 22:48:06 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0008102281096701821 
+[2025-11-27 22:48:06 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0008096795524893837 
+[2025-11-27 22:48:07 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0008102360474627598 
+[2025-11-27 22:48:07 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.00080974811193811 
+[2025-11-27 22:48:07 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0008104360624264669 
+[2025-11-27 22:48:08 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0008102556605728628 
+[2025-11-27 22:48:08 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0008105746532479922 
+[2025-11-27 22:48:08 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0008105608001046005 
+[2025-11-27 22:48:08 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0008105764497867635 
+[2025-11-27 22:48:09 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0008103000510129191 
+[2025-11-27 22:48:09 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0008108723830446251 
+[2025-11-27 22:48:09 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0008108359331694933 
+[2025-11-27 22:48:09 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0008108287487023821 
+[2025-11-27 22:48:10 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0008105873416956348 
+[2025-11-27 22:48:10 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0008106816416222822 
+[2025-11-27 22:48:10 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0008109243438187717 
+[2025-11-27 22:48:10 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0008104521767901523 
+[2025-11-27 22:48:11 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0008105013612985716 
+[2025-11-27 22:48:11 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0008104520531358301 
+[2025-11-27 22:48:11 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0008105309056564656 
+[2025-11-27 22:48:11 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0008103571802289603 
+[2025-11-27 22:48:12 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.000810247451843073 
+[2025-11-27 22:48:12 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0008103591007008953 
+[2025-11-27 22:48:12 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0008105346775770961 
+[2025-11-27 22:48:12 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0008102885744450853 
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0008101475681472994 
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0008103799977106973 
+[2025-11-27 22:48:13 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-160
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 106]=>INFO: iter [165/200] time 0.017 (0.017) data 0.000 (0.000) loss 0.0014 lr 7.3680e-06 eta 0:00:00
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 106]=>INFO: iter [170/200] time 0.022 (0.022) data 0.005 (0.005) loss 0.0014 lr 5.4497e-06 eta 0:00:00
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 106]=>INFO: iter [175/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0017 lr 3.8060e-06 eta 0:00:00
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 106]=>INFO: iter [180/200] time 0.011 (0.011) data 0.000 (0.000) loss 0.0015 lr 2.4472e-06 eta 0:00:00
+[2025-11-27 22:48:13 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:48:14 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008161929086782038 
+[2025-11-27 22:48:14 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.000801320152822882 
+[2025-11-27 22:48:14 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.0007996078697033226 
+[2025-11-27 22:48:14 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0008046346978517249 
+[2025-11-27 22:48:15 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0007988794730044901 
+[2025-11-27 22:48:15 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0008066681524117788 
+[2025-11-27 22:48:15 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0008085786381603351 
+[2025-11-27 22:48:15 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0008075116173131391 
+[2025-11-27 22:48:16 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.0008036907257822653 
+[2025-11-27 22:48:16 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0008081441663671285 
+[2025-11-27 22:48:16 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0008058289489285513 
+[2025-11-27 22:48:16 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.0008069891269163539 
+[2025-11-27 22:48:17 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0008044981129037646 
+[2025-11-27 22:48:17 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0008068452797098351 
+[2025-11-27 22:48:17 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0008083947716901699 
+[2025-11-27 22:48:17 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0008059110405156389 
+[2025-11-27 22:48:18 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.000804224781527677 
+[2025-11-27 22:48:18 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0008059564563963149 
+[2025-11-27 22:48:18 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.0008065621491129461 
+[2025-11-27 22:48:18 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0008059943013358861 
+[2025-11-27 22:48:19 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0008059112621205194 
+[2025-11-27 22:48:19 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0008060360777149485 
+[2025-11-27 22:48:19 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0008055081388548664 
+[2025-11-27 22:48:19 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0008061550373289114 
+[2025-11-27 22:48:20 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0008067161361686885 
+[2025-11-27 22:48:20 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0008059037822441986 
+[2025-11-27 22:48:20 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.000805267943414273 
+[2025-11-27 22:48:20 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0008059872713472162 
+[2025-11-27 22:48:21 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.00080648795821993 
+[2025-11-27 22:48:21 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0008051382952059308 
+[2025-11-27 22:48:21 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0008053711532885509 
+[2025-11-27 22:48:21 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0008053266166825779 
+[2025-11-27 22:48:22 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0008056687752038918 
+[2025-11-27 22:48:22 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0008053420200560461 
+[2025-11-27 22:48:22 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0008054081427066454 
+[2025-11-27 22:48:22 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.0008052269249067952 
+[2025-11-27 22:48:23 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0008049491981698855 
+[2025-11-27 22:48:23 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0008051143756969587 
+[2025-11-27 22:48:23 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0008059182780412718 
+[2025-11-27 22:48:24 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.0008049923347425648 
+[2025-11-27 22:48:24 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.0008046964632074644 
+[2025-11-27 22:48:27 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0008053739205934107 
+[2025-11-27 22:48:27 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0008052321990172184 
+[2025-11-27 22:48:27 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0008051039412914013 
+[2025-11-27 22:48:28 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0008048875937755737 
+[2025-11-27 22:48:28 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.000805428872168388 
+[2025-11-27 22:48:28 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0008045701802945993 
+[2025-11-27 22:48:28 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0008053219489132364 
+[2025-11-27 22:48:29 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0008050579171418687 
+[2025-11-27 22:48:29 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.0008053439012728631 
+[2025-11-27 22:48:29 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.000804619285661508 
+[2025-11-27 22:48:30 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0008050964504946023 
+[2025-11-27 22:48:30 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0008052109589114925 
+[2025-11-27 22:48:30 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0008049398632633879 
+[2025-11-27 22:48:31 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0008045082954181867 
+[2025-11-27 22:48:31 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.000805027958579428 
+[2025-11-27 22:48:31 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0008046911598444639 
+[2025-11-27 22:48:32 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.000804841769899338 
+[2025-11-27 22:48:32 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0008050944585100574 
+[2025-11-27 22:48:32 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.0008046620835860571 
+[2025-11-27 22:48:32 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0008049248948647472 
+[2025-11-27 22:48:33 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0008045657462770901 
+[2025-11-27 22:48:33 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.0008047322369372798 
+[2025-11-27 22:48:33 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0008042304320042603 
+[2025-11-27 22:48:34 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0008045508828945458 
+[2025-11-27 22:48:34 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0008039647309377677 
+[2025-11-27 22:48:34 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0008036231686388935 
+[2025-11-27 22:48:34 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0008040015936678494 
+[2025-11-27 22:48:35 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.000803409793002504 
+[2025-11-27 22:48:35 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0008039053659220891 
+[2025-11-27 22:48:35 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0008040557771225945 
+[2025-11-27 22:48:36 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0008038133373095964 
+[2025-11-27 22:48:36 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0008035432252305726 
+[2025-11-27 22:48:36 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0008038007347479563 
+[2025-11-27 22:48:36 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0008033490527110795 
+[2025-11-27 22:48:37 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0008037082023771578 
+[2025-11-27 22:48:37 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0008033885103468965 
+[2025-11-27 22:48:37 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0008038406587170008 
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0008037208595690376 
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0008039459113206249 
+[2025-11-27 22:48:38 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-180
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 106]=>INFO: iter [185/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0015 lr 1.3815e-06 eta 0:00:00
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 106]=>INFO: iter [190/200] time 0.012 (0.012) data 0.000 (0.000) loss 0.0014 lr 6.1558e-07 eta 0:00:00
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 106]=>INFO: iter [195/200] time 0.010 (0.010) data 0.000 (0.000) loss 0.0015 lr 1.5413e-07 eta 0:00:00
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 106]=>INFO: iter [200/200] time 0.013 (0.013) data 0.000 (0.000) loss 0.0016 lr 0.0000e+00 eta 0:00:00
+[2025-11-27 22:48:38 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *val* set
+[2025-11-27 22:48:39 diffposetalk_trainer.py line 158]=>INFO: iter: 5 loss: 0.0008219121489673852 
+[2025-11-27 22:48:39 diffposetalk_trainer.py line 158]=>INFO: iter: 10 loss: 0.0008054821344558149 
+[2025-11-27 22:48:39 diffposetalk_trainer.py line 158]=>INFO: iter: 15 loss: 0.0008023859506162504 
+[2025-11-27 22:48:39 diffposetalk_trainer.py line 158]=>INFO: iter: 20 loss: 0.0008048025571042672 
+[2025-11-27 22:48:40 diffposetalk_trainer.py line 158]=>INFO: iter: 25 loss: 0.0008064676029607654 
+[2025-11-27 22:48:40 diffposetalk_trainer.py line 158]=>INFO: iter: 30 loss: 0.0008049688107954959 
+[2025-11-27 22:48:40 diffposetalk_trainer.py line 158]=>INFO: iter: 35 loss: 0.0008000120570484017 
+[2025-11-27 22:48:40 diffposetalk_trainer.py line 158]=>INFO: iter: 40 loss: 0.0008047176466789097 
+[2025-11-27 22:48:41 diffposetalk_trainer.py line 158]=>INFO: iter: 45 loss: 0.000808187427982274 
+[2025-11-27 22:48:41 diffposetalk_trainer.py line 158]=>INFO: iter: 50 loss: 0.0008034588408190757 
+[2025-11-27 22:48:41 diffposetalk_trainer.py line 158]=>INFO: iter: 55 loss: 0.0008054660590873523 
+[2025-11-27 22:48:41 diffposetalk_trainer.py line 158]=>INFO: iter: 60 loss: 0.000802311521450368 
+[2025-11-27 22:48:42 diffposetalk_trainer.py line 158]=>INFO: iter: 65 loss: 0.0008007091470062733 
+[2025-11-27 22:48:42 diffposetalk_trainer.py line 158]=>INFO: iter: 70 loss: 0.0008029353821517102 
+[2025-11-27 22:48:42 diffposetalk_trainer.py line 158]=>INFO: iter: 75 loss: 0.0008028772419008116 
+[2025-11-27 22:48:42 diffposetalk_trainer.py line 158]=>INFO: iter: 80 loss: 0.0008023446520383004 
+[2025-11-27 22:48:43 diffposetalk_trainer.py line 158]=>INFO: iter: 85 loss: 0.0008031866896678419 
+[2025-11-27 22:48:43 diffposetalk_trainer.py line 158]=>INFO: iter: 90 loss: 0.0008011152961343113 
+[2025-11-27 22:48:43 diffposetalk_trainer.py line 158]=>INFO: iter: 95 loss: 0.000800308824124697 
+[2025-11-27 22:48:43 diffposetalk_trainer.py line 158]=>INFO: iter: 100 loss: 0.0008018890977837146 
+[2025-11-27 22:48:44 diffposetalk_trainer.py line 158]=>INFO: iter: 105 loss: 0.0008032647205427998 
+[2025-11-27 22:48:44 diffposetalk_trainer.py line 158]=>INFO: iter: 110 loss: 0.0008022586164191704 
+[2025-11-27 22:48:44 diffposetalk_trainer.py line 158]=>INFO: iter: 115 loss: 0.0008012191979619472 
+[2025-11-27 22:48:44 diffposetalk_trainer.py line 158]=>INFO: iter: 120 loss: 0.0008019680564757437 
+[2025-11-27 22:48:45 diffposetalk_trainer.py line 158]=>INFO: iter: 125 loss: 0.0008020276138558984 
+[2025-11-27 22:48:45 diffposetalk_trainer.py line 158]=>INFO: iter: 130 loss: 0.0008024193364410446 
+[2025-11-27 22:48:45 diffposetalk_trainer.py line 158]=>INFO: iter: 135 loss: 0.0008010305666916624 
+[2025-11-27 22:48:46 diffposetalk_trainer.py line 158]=>INFO: iter: 140 loss: 0.0008022228501171672 
+[2025-11-27 22:48:46 diffposetalk_trainer.py line 158]=>INFO: iter: 145 loss: 0.0008007883588012693 
+[2025-11-27 22:48:46 diffposetalk_trainer.py line 158]=>INFO: iter: 150 loss: 0.0008028114136929313 
+[2025-11-27 22:48:46 diffposetalk_trainer.py line 158]=>INFO: iter: 155 loss: 0.0008018902844689306 
+[2025-11-27 22:48:47 diffposetalk_trainer.py line 158]=>INFO: iter: 160 loss: 0.0008030667664570501 
+[2025-11-27 22:48:47 diffposetalk_trainer.py line 158]=>INFO: iter: 165 loss: 0.0008035418432855019 
+[2025-11-27 22:48:47 diffposetalk_trainer.py line 158]=>INFO: iter: 170 loss: 0.0008027646697455031 
+[2025-11-27 22:48:48 diffposetalk_trainer.py line 158]=>INFO: iter: 175 loss: 0.0008032710800346519 
+[2025-11-27 22:48:48 diffposetalk_trainer.py line 158]=>INFO: iter: 180 loss: 0.000802859776498129 
+[2025-11-27 22:48:48 diffposetalk_trainer.py line 158]=>INFO: iter: 185 loss: 0.0008028304780128638 
+[2025-11-27 22:48:48 diffposetalk_trainer.py line 158]=>INFO: iter: 190 loss: 0.0008029175563837941 
+[2025-11-27 22:48:49 diffposetalk_trainer.py line 158]=>INFO: iter: 195 loss: 0.0008025048712555033 
+[2025-11-27 22:48:49 diffposetalk_trainer.py line 158]=>INFO: iter: 200 loss: 0.000802843677229248 
+[2025-11-27 22:48:49 diffposetalk_trainer.py line 158]=>INFO: iter: 205 loss: 0.000802062335708065 
+[2025-11-27 22:48:50 diffposetalk_trainer.py line 158]=>INFO: iter: 210 loss: 0.0008028110977084863 
+[2025-11-27 22:48:50 diffposetalk_trainer.py line 158]=>INFO: iter: 215 loss: 0.0008020862731216258 
+[2025-11-27 22:48:50 diffposetalk_trainer.py line 158]=>INFO: iter: 220 loss: 0.0008028660242085937 
+[2025-11-27 22:48:50 diffposetalk_trainer.py line 158]=>INFO: iter: 225 loss: 0.0008027214554345442 
+[2025-11-27 22:48:51 diffposetalk_trainer.py line 158]=>INFO: iter: 230 loss: 0.0008030653683185254 
+[2025-11-27 22:48:51 diffposetalk_trainer.py line 158]=>INFO: iter: 235 loss: 0.0008031424283585016 
+[2025-11-27 22:48:51 diffposetalk_trainer.py line 158]=>INFO: iter: 240 loss: 0.0008033288298368765 
+[2025-11-27 22:48:52 diffposetalk_trainer.py line 158]=>INFO: iter: 245 loss: 0.0008039866334150488 
+[2025-11-27 22:48:52 diffposetalk_trainer.py line 158]=>INFO: iter: 250 loss: 0.000803481318289414 
+[2025-11-27 22:48:52 diffposetalk_trainer.py line 158]=>INFO: iter: 255 loss: 0.0008032604499592208 
+[2025-11-27 22:48:52 diffposetalk_trainer.py line 158]=>INFO: iter: 260 loss: 0.0008034588778033279 
+[2025-11-27 22:48:53 diffposetalk_trainer.py line 158]=>INFO: iter: 265 loss: 0.0008036920956757692 
+[2025-11-27 22:48:53 diffposetalk_trainer.py line 158]=>INFO: iter: 270 loss: 0.0008033576533543291 
+[2025-11-27 22:48:53 diffposetalk_trainer.py line 158]=>INFO: iter: 275 loss: 0.0008025694153779609 
+[2025-11-27 22:48:54 diffposetalk_trainer.py line 158]=>INFO: iter: 280 loss: 0.0008036235422228597 
+[2025-11-27 22:48:54 diffposetalk_trainer.py line 158]=>INFO: iter: 285 loss: 0.0008040593499971325 
+[2025-11-27 22:48:54 diffposetalk_trainer.py line 158]=>INFO: iter: 290 loss: 0.0008035933986258019 
+[2025-11-27 22:48:54 diffposetalk_trainer.py line 158]=>INFO: iter: 295 loss: 0.0008039277238313551 
+[2025-11-27 22:48:55 diffposetalk_trainer.py line 158]=>INFO: iter: 300 loss: 0.000803672995728751 
+[2025-11-27 22:48:55 diffposetalk_trainer.py line 158]=>INFO: iter: 305 loss: 0.0008035708621495449 
+[2025-11-27 22:48:55 diffposetalk_trainer.py line 158]=>INFO: iter: 310 loss: 0.0008038760594753248 
+[2025-11-27 22:48:56 diffposetalk_trainer.py line 158]=>INFO: iter: 315 loss: 0.000803670201576241 
+[2025-11-27 22:48:56 diffposetalk_trainer.py line 158]=>INFO: iter: 320 loss: 0.0008036320357859949 
+[2025-11-27 22:48:56 diffposetalk_trainer.py line 158]=>INFO: iter: 325 loss: 0.0008034742295813675 
+[2025-11-27 22:48:56 diffposetalk_trainer.py line 158]=>INFO: iter: 330 loss: 0.0008036894517400386 
+[2025-11-27 22:48:57 diffposetalk_trainer.py line 158]=>INFO: iter: 335 loss: 0.0008031778802066597 
+[2025-11-27 22:48:57 diffposetalk_trainer.py line 158]=>INFO: iter: 340 loss: 0.0008038110923200078 
+[2025-11-27 22:48:57 diffposetalk_trainer.py line 158]=>INFO: iter: 345 loss: 0.0008034008735642377 
+[2025-11-27 22:48:57 diffposetalk_trainer.py line 158]=>INFO: iter: 350 loss: 0.0008038092738882239 
+[2025-11-27 22:48:58 diffposetalk_trainer.py line 158]=>INFO: iter: 355 loss: 0.0008041111877004445 
+[2025-11-27 22:48:58 diffposetalk_trainer.py line 158]=>INFO: iter: 360 loss: 0.0008035655154445623 
+[2025-11-27 22:48:58 diffposetalk_trainer.py line 158]=>INFO: iter: 365 loss: 0.0008038939815652493 
+[2025-11-27 22:48:58 diffposetalk_trainer.py line 158]=>INFO: iter: 370 loss: 0.0008037296408548246 
+[2025-11-27 22:49:01 diffposetalk_trainer.py line 158]=>INFO: iter: 375 loss: 0.0008035307923952739 
+[2025-11-27 22:49:02 diffposetalk_trainer.py line 158]=>INFO: iter: 380 loss: 0.0008037998537091832 
+[2025-11-27 22:49:02 diffposetalk_trainer.py line 158]=>INFO: iter: 385 loss: 0.0008038863950929084 
+[2025-11-27 22:49:02 diffposetalk_trainer.py line 158]=>INFO: iter: 390 loss: 0.0008037516356218989 
+[2025-11-27 22:49:02 diffposetalk_trainer.py line 158]=>INFO: iter: 395 loss: 0.0008040236462426337 
+[2025-11-27 22:49:03 diffposetalk_trainer.py line 158]=>INFO: iter: 400 loss: 0.0008038295283040497 
+[2025-11-27 22:49:03 base_trainer.py line 668]=>INFO: Checkpoint saved to output/HDTF_TFHP/StyleEncoderTrainer/Eval/model/model.pth.tar-iter-200
+[2025-11-27 22:49:03 base_trainer.py line 246]=>INFO: Finish training!
+[2025-11-27 22:49:03 base_trainer.py line 254]=>INFO: Deploy the last-epoch model
+[2025-11-27 22:49:03 diffposetalk_trainer.py line 146]=>INFO: Evaluate on the *test* set
+[2025-11-27 22:49:03 base_trainer.py line 260]=>INFO: Elapsed: 0:03:54

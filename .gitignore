@@ -7,30 +7,19 @@ __pycache__/
 .Python
 *.egg-info/
 
-# model
-model.pth.tar-iter-*
-checkpoint
+# training output
+model/
+renderings/
 
 # wandb files
-wandb
+wandb/
 
 # tensorboard
 tensorboard/
 
-pretrained/
+# 3DMM files
+FLAME/
 
 # ignore the data
-HDTF_TFHP/
-models/Avatar/data/
-
-node_modules/
-
-# ignore the largest json files
-filtered_video_clips_with_captions.json
-filtered_video_clips.json
-mini_filtered_video_clips_with_captions.json
-
-# filt data videos
-data/data_pipline/audio_visual_dataset/output
-data/data_pipline/audio_visual_dataset/output_V1
-data/data_pipline/audio_visual_dataset/output_clips
+data/HDTF_TFHP
+audio_visual_dataset/

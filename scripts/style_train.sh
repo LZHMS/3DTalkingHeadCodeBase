@@ -1,5 +1,4 @@
 #!/bin/bash
-export PYOPENGL_PLATFORM=osmesa
 
 # custom config
 TRAINER=StyleEncoderTrainer

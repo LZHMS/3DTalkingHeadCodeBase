@@ -14,7 +14,7 @@ if [ -d "$DIR" ]; then
   rm -rf ${DIR}
 else
   mkdir -p ${DIR}
-  python -m main.train --mode train\
+  python train.py --mode train\
     --config-file config/difftalk_trainer_config.yaml \
     ENV.OUTPUT_DIR ${DIR} \
     DATASET.NAME ${DATASET} \
