@@ -16,7 +16,7 @@ class DiffTalkingHead(nn.Module):
 
         # Model parameters
         self.target = cfg.MODEL.TAIL.TYARGET
-        self.use_style = True if cfg.ADD.STYLE_ENC_CKPT else False
+        self.use_style = True if cfg.ENV.EXTRA.STYLE_ENC_CKPT else False
         self.motion_feat_dim = 50
         if cfg.MODEL.HEAD.ROT_REPR == 'aa':
             self.motion_feat_dim += 1 if cfg.MODEL.HEAD.NO_HEAD_POSE else 4

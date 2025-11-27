@@ -1,1 +1,1 @@
-from .TalkerEvaluator import TalkerEvaluator
+from .TalkerEvaluator import TDTalkerEvaluator

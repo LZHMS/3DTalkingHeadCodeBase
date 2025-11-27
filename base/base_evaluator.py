@@ -5,12 +5,12 @@ logger: logging.Logger
 EVALUATOR_REGISTRY = Registry("EVALUATOR")
 
 
-def build_evaluator(cfg):
+def build_evaluator(cfg, *args, **kwargs):
     avai_evaluators = EVALUATOR_REGISTRY.registered_names()
-    check_availability(cfg.TEST.EVALUATOR, avai_evaluators)
+    check_availability(cfg.EVALUATE.EVALUATOR, avai_evaluators)
     if cfg.ENV.VERBOSE:
-        logger.info("Loading evaluator: {}".format(cfg.TEST.EVALUATOR))
-    return EVALUATOR_REGISTRY.get(cfg.TEST.EVALUATOR)(cfg)  
+        logger.info("Loading evaluator: {}".format(cfg.EVALUATE.EVALUATOR))
+    return EVALUATOR_REGISTRY.get(cfg.EVALUATE.EVALUATOR)(cfg.EVALUATE, *args, **kwargs)  
 
 class EvaluatorBase:
     """Base evaluator."""

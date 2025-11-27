@@ -12,7 +12,6 @@ anyio==4.5.0
 async-timeout @ file:///croot/async-timeout_1732661977001/work
 attrs @ file:///croot/attrs_1734533101012/work
 audioread==3.0.1
-av @ file:///home/conda/feedstock_root/build_artifacts/av_1658711395283/work
 beautifulsoup4==4.13.5
 Bottleneck @ file:///croot/bottleneck_1731058641041/work
 Brotli @ file:///home/conda/feedstock_root/build_artifacts/brotli-split_1666788425425/work
@@ -66,14 +65,17 @@ huggingface-hub==0.25.1
 humanfriendly==10.0
 hydra-core==1.3.2
 hyperframe @ file:///home/conda/feedstock_root/build_artifacts/hyperframe_1737618333194/work
--e git+https://github.com/hhj1897/face_alignment.git@9cf5494e443f26d567972f3f50f6212d65b76c01#egg=ibug_face_alignment&subdirectory=../../../external/face_alignment
--e git+https://github.com/hhj1897/face_detection@db2a4e8eae8c9c53385ff0773e9db08f03cf21ad#egg=ibug_face_detection&subdirectory=../../../external/face_detection
+# Editable install with no version control (ibug_face_alignment==0.1.0)
+-e /mnt/d/Projects/Repro/3DTalkingHead/DiffPoseTalk/scripts_for_dataset/spectre/external/face_alignment
+# Editable install with no version control (ibug_face_detection==0.1.0)
+-e /mnt/d/Projects/Repro/3DTalkingHead/DiffPoseTalk/scripts_for_dataset/spectre/external/face_detection
 idna @ file:///croot/idna_1714398848350/work
 imageio==2.34.2
-imageio-ffmpeg==0.5.1
+imageio-ffmpeg==0.6.0
 importlib_metadata==8.2.0
 importlib_resources==6.4.0
--e git+https://github.com/Zielon/MICA.git@af22e7a5810d474bc28a1433db533723d6bd2b07#egg=insightface&subdirectory=insightface-0.7/insightface-0.7/python-package
+# Editable install with no version control (insightface==0.7.2)
+-e /mnt/d/Projects/Repro/3DTalkingHead/DiffPoseTalk/scripts_for_dataset/MICA/insightface-0.7/insightface-0.7/python-package
 iopath==0.1.10
 Jinja2==3.1.4
 joblib==1.4.2
@@ -126,7 +128,7 @@ orjson==3.10.7
 packaging==24.1
 pandas==2.0.3
 pickle-mixin==1.0.2
-pillow @ file:///croot/pillow_1752524526621/work
+pillow==11.3.0
 platformdirs==4.2.2
 pooch==1.8.2
 portalocker==3.2.0
@@ -143,14 +145,15 @@ pycparser==2.22
 pydantic==2.9.2
 pydantic_core==2.23.4
 pydub==0.25.1
-pyglet==2.0.16
+pyglet==1.5.29
 Pygments==2.18.0
-PyOpenGL==3.1.10
+PyOpenGL==3.1.6
 PyOpenGL-accelerate==3.1.10
 pyparsing==3.1.2
-pyrender @ file:///home/conda/feedstock_root/build_artifacts/pyrender_1656506296055/work
+pyrender==0.1.45
 PySocks @ file:///tmp/build/80754af9/pysocks_1605305812635/work
 python-dateutil @ file:///croot/python-dateutil_1716495738603/work
+python-dotenv==1.2.1
 python-multipart==0.0.10
 python_speech_features==0.6
 pytorch3d==0.7.3
@@ -165,9 +168,10 @@ rich==13.8.1
 ruff==0.6.7
 sacremoses @ file:///croot/sacremoses_1756299828229/work
 safetensors==0.4.4
+scenedetect==0.6.4
 scikit-image==0.21.0
 scikit-learn==1.6.1
-scipy @ file:///croot/scipy_1733756309941/work/dist/scipy-1.13.1-cp39-cp39-linux_x86_64.whl#sha256=3b247b926209f2d9f719ebae39faf3ff891b2596150ed8f8349adfc3eb19441c
+scipy==1.13.1
 semantic-version==2.10.0
 sentry-sdk==2.43.0
 shellingham==1.5.4
@@ -192,10 +196,11 @@ tokenizers==0.19.1
 tomlkit==0.12.0
 torch==2.0.0
 torchaudio==2.0.1
+torchdiffeq==0.2.5
 torchvision==0.15.1
 tqdm==4.66.5
 transformers==4.44.2
-trimesh==4.4.3
+trimesh==3.21.5
 triton==2.0.0
 typer==0.12.5
 typing_extensions==4.12.2

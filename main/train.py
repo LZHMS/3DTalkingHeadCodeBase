@@ -3,7 +3,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 from base import BaseConfig, build_trainer
-from trainers import StyleEncoderTrainer, DiffPoseTalkTrainer, FlowMatchingTrainer
+from trainers import StyleEncoderTrainer, DiffPoseTalkTrainer
 
 def merge_args(base_cfg, args):
     if args.gpu:

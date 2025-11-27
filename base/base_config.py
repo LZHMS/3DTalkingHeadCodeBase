@@ -69,17 +69,6 @@ class BaseConfig:
     cfg.DATASET.NAME = ""
     cfg.DATASET.ROOT = ""
 
-    # for vocaset
-    cfg.DATASET.VOCASET = CN()
-    cfg.DATASET.VOCASET.AUDIO = ""
-    cfg.DATASET.VOCASET.VERTICES = ""
-    cfg.DATASET.VOCASET.TEMPLATE = ""
-    cfg.DATASET.VOCASET.TRAIN = list(range(1, 41))
-    cfg.DATASET.VOCASET.VAL = list(range(21, 41))
-    cfg.DATASET.VOCASET.TEST = list(range(21, 41))
-    cfg.DATASET.VOCASET.WAV2VEC2 = ""
-    cfg.DATASET.VOCASET.READ_AUDIO = True
-
     # for HDTF_TFHP
     cfg.DATASET.HDTF_TFHP = CN()
     cfg.DATASET.HDTF_TFHP.LMDB = ""
@@ -181,15 +170,6 @@ class BaseConfig:
     cfg.MODEL.TAIL.MLP_RATIO = 4
     cfg.MODEL.TAIL.TYARGET = "sample"  # for diffusion model, either "sample" or "noise"
 
-    cfg.ALGORITHM = CN()
-    cfg.ALGORITHM.FLOWMATCHING = CN()
-    cfg.ALGORITHM.FLOWMATCHING.MIN_SIGMA = 0.0
-    cfg.ALGORITHM.FLOWMATCHING.INFERENCE_MODE = 'euler'  # 'euler' or 'adaptive' for ODE solving         # Minimum sigma for numerical stability
-    cfg.ALGORITHM.FLOWMATCHING.NUM_STEPS = 25            # Number of Euler steps for sampling
-    cfg.ALGORITHM.FLOWMATCHING.REVERSE_FLOW = True       # Use reverse flow (x1->x0)
-    cfg.ALGORITHM.FLOWMATCHING.LOG_NORMAL_MEAN = 0.0     # Log-normal sampling mean for time
-    cfg.ALGORITHM.FLOWMATCHING.LOG_NORMAL_STD = 1.0      # Log-normal sampling std for time
-
     ###########################
     # Optimization
     ###########################
@@ -276,12 +256,12 @@ class BaseConfig:
     # Whether to perform evaluation during training
     cfg.TRAIN.EVALUATE = True
     cfg.TRAIN.EVAL_FREQ = 10
+    cfg.TRAIN.RENDER_FREQ = 10
 
     ###########################
     # Test
     ###########################
     cfg.TEST = CN()
-    cfg.TEST.EVALUATOR = "Classification"
     # If NO_TEST=True, no testing will be conducted
     cfg.TEST.NO_TEST = False
     # Use test or val set for FINAL evaluation
@@ -292,14 +272,14 @@ class BaseConfig:
     cfg.TEST.FINAL_MODEL = "last_step"
 
     cfg.EVALUATE = CN()
+    cfg.EVALUATE.EVALUATOR = "TalkerEvaluator"
     cfg.EVALUATE.LOAD_RENDER = False
     cfg.EVALUATE.SAVE_COEF = False
+    cfg.EVALUATE.TARGET = "sample" # foe diffusion model, either
+    cfg.EVALUATE.NO_CONSTRAIN_PREV = False
     
     cfg.EVALUATE.LOSS = CN()
-    cfg.EVALUATE.LOSS.NAME = "VQLoss"
-    cfg.EVALUATE.LOSS.TARGET = "sample" # foe diffusion model, either
-    cfg.EVALUATE.LOSS.NO_CONSTRAIN_PREV = False
-    cfg.EVALUATE.LOSS.QUANT_LOSS_WEIGHT = 1.0
+    cfg.EVALUATE.LOSS.NAME = "L2Loss"
     cfg.EVALUATE.LOSS.CONTRASTIVE = CN()
     cfg.EVALUATE.LOSS.CONTRASTIVE.TEMPRATURE = 0.1
     cfg.EVALUATE.LOSS.GEOMETRIC = CN()
@@ -320,7 +300,6 @@ class BaseConfig:
     cfg.EVALUATE.RENDER.NAME = "PyMeshRenderer"
     cfg.EVALUATE.RENDER.REND_SIZE = (640, 640)
     cfg.EVALUATE.RENDER.BLACK_BG = False
-    cfg.EVALUATE.RENDER.PYOPENGL_PLATFORM = "osmesa"  # 'osmesa' or 'egl'
     # OP
     self.cfg = cfg
 

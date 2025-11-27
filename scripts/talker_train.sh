@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# custom config
-TRAINER=FlowMatchingTrainer  # DiffPoseTalkTrainer or FlowMatchingTrainer 
+export PYOPENGL_PLATFORM=osmesa
 
+# custom config
+TRAINER=DiffPoseTalkTrainer  # DiffPoseTalkTrainer or FlowMatchingTrainer
 DATASET=HDTF_TFHP
 TAG=Train
 
@@ -12,8 +13,9 @@ if [ -d "$DIR" ]; then
   echo "Results are available in ${DIR}. Skip this job"
   rm -rf ${DIR}
 else
-  /zhli/miniconda3/envs/diffposetalk/bin/python -m main.train \
-    --config-file config/flowmatching_trainer_config.yaml \
+  mkdir -p ${DIR}
+  python -m main.train --mode train\
+    --config-file config/difftalk_trainer_config.yaml \
     ENV.OUTPUT_DIR ${DIR} \
     DATASET.NAME ${DATASET} \
     TRAINER.NAME ${TRAINER} \

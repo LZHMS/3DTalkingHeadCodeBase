@@ -95,7 +95,7 @@ class TrainerBase:
         else:
           self.device = torch.device("cpu")
           logger.info('Setting device to {}'.format(self.device))
-
+        
     def register_model(self, name="model", model=None, optim=None, sched=None):
         if self.__dict__.get("_models") is None:
             raise AttributeError(
@@ -189,14 +189,13 @@ class TrainerBase:
             # Finish the run and upload any remaining data.
             self.wandb_run.finish()
             
-    def write_scalar(self, tag, scalar_value, global_step=None):
-        if self._writer is None:
-            # Do nothing if writer is not initialized
-            # Note that writer is only used when training is needed
-            pass
-        else:
+    def write_scalar(self, tag, scalar_value, global_step=None, wandb=False):
+        if self._writer is not None and not wandb:
             self._writer.add_scalar(tag, scalar_value, global_step)
 
+        if self.cfg.ENV.USE_WANDB:
+            self.wandb_run.log({tag: scalar_value})
+            
     """Train model with a generic training loop.
         Functions:
             > train

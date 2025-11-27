@@ -7,24 +7,24 @@ ENV:
   USE_WANDB: True
   WANDB:
     KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
-    ENTITY: "3DVZHao"
-    PROJECT: "FLowTalker"
-    NAME: "TrainingStyleEncoder"
-    NOTES: "Training as baseline."
-    TAGS: "Baseline"
-    MODE: "online"
+    ENTITY: 3DVZHao
+    PROJECT: 3DTalkingHead
+    NAME: TrainingStyleEncoder
+    NOTES: Training as the baseline model.
+    TAGS: Baseline
+    MODE: online
 
 DATASET:
   NAME: HDTF_TFHP
   ROOT: ./data/
   HDTF_TFHP:
-    COEF_STATS: "stats_train.npz"
-    TRAIN: "train.txt"
-    VAL: "val.txt"
-    TEST: "test.txt"
+    COEF_STATS: stats_train.npz
+    TRAIN: train.txt
+    VAL: val.txt
+    TEST: test.txt
     COEF_FPS: 25      # frames per second for coefficients (sequence fps)
     MOTIONS: 100      # number of motions per sample
-    CROP: "random"    # crop strategy
+    CROP: random    # crop strategy
     AUDIO_SR: 16000   # audio sampling rate
 
 DATALOADER:
@@ -49,7 +49,7 @@ MODEL:
     MLP_RATIO: 4
 
 LOSS:
-  NAME: "NTXentLoss"
+  NAME: NTXentLoss
   CONTRASTIVE:
     TEMPRATURE: 0.1
 
@@ -58,18 +58,17 @@ TRAINER:
 
 TRAIN:
   USE_ITERS: True
-  MAX_ITERS: 100000
-  PRINT_FREQ: 50
-  SAVE_FREQ: 2000
+  MAX_ITERS: 200
+  PRINT_FREQ: 5
+  SAVE_FREQ: 20
   EVALUATE: True
-  EVAL_FREQ: 2000
+  EVAL_FREQ: 20
 
 OPTIM:
-  NAME: "adam"
+  NAME: adam
   LR: 0.0001
-  LR_SCHEDULER: "cosine"
+  LR_SCHEDULER: cosine
   LR_UPDATE_FREQ: 1
 
-TEST:
-  NO_TEST: False
-  EVALUATOR: TalkerEvaluator
+EVALUATE:
+  EVALUATOR: TDTalkerEvaluator

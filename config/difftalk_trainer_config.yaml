@@ -4,6 +4,15 @@ ENV:
   DESCRIPTION: Train the diffusion model of DiffPoseTalk.
   OUTPUT_DIR: ./output
   VERBOSE: True
+  USE_WANDB: False
+  WANDB:
+    KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
+    ENTITY: 3DVZHao
+    PROJECT: 3DTalkingHead
+    NAME: TrainingDenoisingNetwork
+    NOTES: Training as the baseline model.
+    TAGS: [Baseline]
+    MODE: online
   EXTRA:
     STYLE_ENC_CKPT: 
 
@@ -11,16 +20,16 @@ DATASET:
   NAME: HDTF_TFHP
   ROOT: ./data/
   HDTF_TFHP:
-    COEF_STATS: "stats_train.npz"
-    TRAIN: "train.txt"
-    VAL: "val.txt"
-    TEST: "test.txt"
+    COEF_STATS: stats_train.npz
+    TRAIN: train.txt
+    VAL: val.txt
+    TEST: test.txt
     COEF_FPS: 25      # frames per second for coefficients (sequence fps)
     MOTIONS: 100      # number of motions per sample
-    CROP: "random"    # crop strategy
+    CROP: random    # crop strategy
     AUDIO_SR: 16000   # audio sampling rate
     N_PREV_MOTIONS: 10
-    PAD_MODE: 'zero'
+    PAD_MODE: zero
     USE_CONTEXT_AUDIO: True
     TRUNC_PROB1: 0.3
     TRUNC_PROB2: 0.4
@@ -28,16 +37,16 @@ DATASET:
 DATALOADER:
   NUM_WORKERS: 4
   TRAIN:
-    BATCH_SIZE: 32
+    BATCH_SIZE: 8
   TEST:
-    BATCH_SIZE: 64
+    BATCH_SIZE: 16
 
 MODEL:
   NAME: DiffTalkingHead
   HEAD:
-    ROT_REPR: 'aa'
+    ROT_REPR: aa
     NO_HEAD_POSE: False
-    AUDIO_MODEL: 'wav2vec2'
+    AUDIO_MODEL: wav2vec2
     AUDIO_DIM: 128
     STYLE_DIM: 128
     USE_INDICATOR: True
@@ -48,45 +57,50 @@ MODEL:
     HIDDEN_SIZE: 512
     NUM_HIDDEN_LAYERS: 8
     NUM_ATTENTION_HEADS: 8
-    DIFF_SCHEDULE: 'cosine'
+    DIFF_SCHEDULE: cosine
     N_STEPS: 1000
   TAIL:
     MLP_RATIO: 4
-    TYARGET: "sample" 
-  GUIDING_CONDITIONS: 'audio,style'
-  CFG_MODE: 'incremental' # 'full', 'incremental', 'none'
-
-LOSS:
-  NAME: "L2Loss"
-  NO_CONSTRAIN_PREV: False
-  GEOMETRIC:
-    W_VERTEX: 2e6  # weight of the vertex loss
-    W_VELOCITY: 1e7  # weight of the velocity loss
-    W_SMOOTH: 1e5   # weight of the vertex acceleration regularization
-  HEAD:
-    W_ANGLE: 0.05  # weight of the head angle loss
-    W_VELOCITY: 5.0 # weight of the head angular velocity loss
-    W_SMOOTH: 0.5  # weight of the head angular acceleration regularization
-    W_TRANS: 0.5
+    TYARGET: sample 
+  GUIDING_CONDITIONS: audio,style
+  CFG_MODE: incremental # full, incremental, none
 
 TRAINER:
   NAME: DiffPoseTalkTrainer
 
 TRAIN:
   USE_ITERS: True
-  MAX_ITERS: 200000
-  PRINT_FREQ: 50
-  SAVE_FREQ: 10000
+  MAX_ITERS: 200
+  PRINT_FREQ: 5
+  SAVE_FREQ: 20
   EVALUATE: True
-  EVAL_FREQ: 5000
+  EVAL_FREQ: 20
+  RENDER_FREQ: 200
 
 OPTIM:
-  NAME: "adam"
+  NAME: adam
   LR: 0.0001
-  LR_SCHEDULER: "gradual"
+  LR_SCHEDULER: gradual
   WARMUP_MULTIPLIER: 1
   LR_UPDATE_FREQ: 1
 
-TEST:
-  NO_TEST: False
-  EVALUATOR: CodeTalkerEvaluator
+EVALUATE:
+  EVALUATOR: TDTalkerEvaluator
+  TARGET: sample
+  LOAD_RENDER: True
+  NO_CONSTRAIN_PREV: False
+  LOSS:
+    NAME: L2Loss
+    GEOMETRIC:
+      W_VERTEX: 2e6  # weight of the vertex loss
+      W_VELOCITY: 1e7  # weight of the velocity loss
+      W_SMOOTH: 1e5   # weight of the vertex acceleration regularization
+      HEAD:
+        W_ANGLE: 0.05  # weight of the head angle loss
+        W_VELOCITY: 5.0 # weight of the head angular velocity loss
+        W_SMOOTH: 0.5  # weight of the head angular acceleration regularization
+        W_TRANS: 0.5
+  RENDER:
+    NAME: PyMeshRenderer
+    REND_SIZE: (640, 640)
+    BLACK_BG: False
