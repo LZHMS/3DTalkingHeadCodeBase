@@ -394,13 +394,12 @@ This codebase follows a **registry-based modular design** where:
 If you find this codebase useful for your research, please consider citing:
 
 ```bibtex
-@misc{3DTalkingHeadCodeBase,
+@software{3DTalkingHeadCodeBase,
   author       = {Zhihao Li},
   title        = {3DTalkingHeadCodeBase: A Modular Framework for 3D Talking Head Generation},
   year         = {2025},
-  publisher    = {GitHub},
-  journal      = {GitHub Repository},
-  howpublished = {\url{https://github.com/LZHMS/3DTalkingHeadCodeBase}}
+  url          = {https://github.com/LZHMS/3DTalkingHeadCodeBase},
+  version      = {1.0.0}
 }
 ```
 
