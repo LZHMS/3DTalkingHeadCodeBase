@@ -6,7 +6,7 @@ ENV:
   VERBOSE: True
   USE_WANDB: False
   WANDB:
-    KEY: a86716e4e39d88d76fec9260c7783f8eeef1edf8
+    KEY: <your wandb key>
     ENTITY: 3DVZHao
     PROJECT: 3DTalkingHead
     NAME: TrainingDenoisingNetwork

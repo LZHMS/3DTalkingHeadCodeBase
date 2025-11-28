@@ -48,7 +48,7 @@ By embracing structured programming, **complex code is divided into independent 
 
 ## 📁 Project Structure
 
-```
+```shell
 3DTalkingHeadCodeBase/
 ├── base/                      # Core base classes
 │   ├── base_config.py         # Configuration base class
@@ -57,14 +57,11 @@ By embracing structured programming, **complex code is divided into independent 
 │   ├── base_model.py          # Model base class
 │   ├── base_trainer.py        # Trainer base class
 │   └── base_evaluator.py      # Evaluator base class
-│
 ├── config/                     # Configuration files
 │   ├── difftalk_trainer_config.yaml  # DiffPoseTalk trainer config
 │   └── style_trainer_config.yaml     # Style encoder trainer config
-│
 ├── dataset/                   # Dataset implementations
 │   └── HDTF_TFHP.py           # HDTF-TFHP dataset
-│
 ├── models/                    # Model implementations
 │   ├── diffposetalk.py        # DiffPoseTalk model
 │   ├── avatar/                # Avatar related modules
@@ -77,13 +74,10 @@ By embracing structured programming, **complex code is divided into independent 
 │       ├── audio/             # Audio feature extractors
 │       ├── head/              # Head model components
 │       └── network/           # Network architectures
-│
 ├── trainers/                   # Training logic
 │   └── diffposetalk_trainer.py # DiffPoseTalk trainer
-│
 ├── evaluator/                # Evaluators
 │   └── TalkerEvaluator.py     # Talking head evaluator
-│
 ├── utils/                      # Utility functions
 │   ├── optim/                 # Optimizers and schedulers
 │   ├── tools.py               # General utilities
@@ -92,17 +86,13 @@ By embracing structured programming, **complex code is divided into independent 
 │   ├── loss.py                # Loss functions
 │   ├── media.py               # Media utilities
 │   └── renderer.py            # Rendering utilities
-│
 ├── scripts/                    # Shell scripts
 │   ├── style_train.sh         # Style encoder training script
 │   └── talker_train.sh        # Talker training script
-│
 ├── data/                       # Data directory
 │   └── HDTF_TFHP/             # HDTF-TFHP dataset files
-│
 ├── output/                     # Training outputs
 │   └── HDTF_TFHP/             # Output for HDTF-TFHP experiments
-│
 ├── pretrained/                 # Pretrained models
 ├── train.py                    # Main training entry point
 ├── environment.yml            # Conda environment file
@@ -111,8 +101,8 @@ By embracing structured programming, **complex code is divided into independent 
 
 ## 📁 Trainer Architecture
 
-```
-TrainerBase
+```shell
+Trainer
 ├── config
 │   ├── check_cfg
 │   └── system_init
@@ -155,9 +145,25 @@ TrainerBase
 │   ├── update_lr
 │   └── get_current_lr
 ├── test
+│   ├── test
 │   └── parse_batch_test
 ├── evaluator
-│   └── build_loss_metrics
+│   ├── build_evaluator
+│   ├── loss
+│   │   ├── build_loss_metrics
+│   │   ├── fetch_mask
+│   │   ├── geometric_losses
+│   │   ├── simple_loss
+│   │   ├── velocity_loss
+│   │   └── smooth_loss
+│   ├── FLAME
+│   │   ├── get_coef_dict
+│   │   ├── coef_dict_to_vertices
+│   │   └── save_coef_file
+│   ├── render
+│   │   ├── setup_mesh_renderer
+│   │   ├── render_and_save
+│   │   └── render_to_video
 ├── save_load
 │   ├── save_model
 │   ├── save_checkpoint
@@ -166,9 +172,29 @@ TrainerBase
 │   ├── load_pretrained_weights
 │   ├── resume_model_if_exist
 │   └── resume_from_checkpoint
-└── tools
-    ├── detect_anomaly
-    └── count_num_param
+├── tools
+│   ├── optimizer
+│   │   ├── RAdam
+│   │   ├── PlainRAdam
+│   │   └── AdamW
+│   ├── scheduler
+│   │   ├── ConstantWarmupScheduler
+│   │   ├── LinearWarmupScheduler
+│   │   └── GradualWarmupScheduler
+│   ├── loss
+│   │   ├── calc_vq_loss
+│   │   ├── calc_logit_loss
+│   │   └── nt_xent_loss
+│   ├── meida
+│   │   ├── combine_video_and_audio
+│   │   ├── combine_frames_and_audio
+│   │   ├── convert_video
+│   │   ├── reencode_audio
+│   │   └── extract_frames
+│   ├── render
+│   │   └── PyMeshRenderer     # psbody mesh
+│   ├── count_num_param
+│   └── others
 ```
 
 ## 🚀 Quick Start
@@ -243,37 +269,103 @@ trainer.train()  # Handles entire training loop
 
 ### Configuration System
 
-Hierarchical configuration powered by YACS:
+The most fantactic component is the config system which can include all config parameters in the project.
+Only one `yaml` file you can config your own project and fast set up the training pipline, just like the following overview config:
 
 ```yaml
 # Example configuration
 ENV:
+  SEED: 2025
+  NAME: StyleEncoder_Trainer
+  DESCRIPTION: Train the style encoder of DiffPoseTalk.
   OUTPUT_DIR: ./output
-  GPU: [0, 1]
-  SEED: 42
-
-MODEL:
-  NAME: VQAutoEncoder
-  BACKBONE:
-    HIDDEN_SIZE: 768
-    NUM_HIDDEN_LAYERS: 6
-    NUM_ATTENTION_HEADS: 8
-
-OPTIM:
-  NAME: adamw
-  LR: 0.0001
-  WEIGHT_DECAY: 0.0001
-  MAX_EPOCH: 100
+  VERBOSE: True
+  USE_WANDB: False
+  WANDB:
+    KEY: <your wandb key>
+    ENTITY: 3DVZHao
+    PROJECT: 3DTalkingHead
+    NAME: TrainingStyleEncoder
+    NOTES: Training as the baseline model.
+    TAGS: Baseline
+    MODE: online
+  EXTRA:
+    STYLE_ENC_CKPT: 
 
 DATASET:
-  NAME: VOCASET
-  ROOT: ./data
-  BATCH_SIZE: 32
+  NAME: HDTF_TFHP
+  ROOT: ./data/
+  HDTF_TFHP:
+    COEF_STATS: stats_train.npz
+    TRAIN: train.txt
+    VAL: val.txt
+    TEST: test.txt
+    COEF_FPS: 25      # frames per second for coefficients (sequence fps)
+    MOTIONS: 100      # number of motions per sample
+    CROP: random    # crop strategy
+    AUDIO_SR: 16000   # audio sampling rate
+
+DATALOADER:
+  NUM_WORKERS: 4
+  TRAIN:
+    BATCH_SIZE: 32
+  TEST:
+    BATCH_SIZE: 64
+
+MODEL:
+  NAME: StyleEncoder
+  HEAD:
+    ROT_REPR: 'aa'
+    NO_HEAD_POSE: False
+  BACKBONE:
+    NAME: TransformerEncoder
+    IN_DIM: 50
+    HIDDEN_SIZE: 128
+    NUM_HIDDEN_LAYERS: 4
+    NUM_ATTENTION_HEADS: 4
+  TAIL:
+    MLP_RATIO: 4
+
+LOSS:
+  NAME: NTXentLoss
+  CONTRASTIVE:
+    TEMPRATURE: 0.1
+
+TRAINER:
+  NAME: StyleEncoderTrainer
+
+TRAIN:
+  USE_ITERS: True
+  MAX_ITERS: 200
+  PRINT_FREQ: 5
+  SAVE_FREQ: 20
+  EVALUATE: True
+  EVAL_FREQ: 20
+
+OPTIM:
+  NAME: adam
+  LR: 0.0001
+  LR_SCHEDULER: cosine
+  LR_UPDATE_FREQ: 1
+
+EVALUATE:
+  EVALUATOR: TDTalkerEvaluator
+```
+
+More exciting things include extending your custom parameters to the `ENV.EXTRA`, which is an extendable configuration.  
+When you cannot find your parameters in the `base/base_config.py` file and do not want to add them as global configurations across all projects, you can use this method to create a custom `yml` configuration file.
+
+Note that the `STYLE_ENC_CKPT` parameter does not appear in the `base/base_config.py` file.
+
+```yml
+ENV:
+  EXTRA:
+    STYLE_ENC_CKPT: 
 ```
 
 ### Registry System
 
-Component registration for easy extension:
+All components in the CodeBase are set up using the registry system. By using the `@TRAINER_REGISTRY.register()` decorator, we can register all defined modules into a centralized pool. Through the configuration file, we can then select the corresponding module to compose the required project. This approach is highly convenient and reusable!
 
 ```python
 from base import TRAINER_REGISTRY
@@ -286,6 +378,7 @@ class CustomTrainer(TrainerBase):
 ```
 
 ## 📊 Supported Models
+Models can be difined using the components from `models/lib` including the `head`, `backbone` and `tail` config. Some standard module can be reuseable in this way.
 
 | Model | Type | Paper | Status |
 |-------|------|-------|---------|
@@ -300,6 +393,7 @@ class CustomTrainer(TrainerBase):
 ## 🛠️ Advanced Features
 
 ### Distributed Training
+Distributed training allows you to scale your training process across multiple GPUs or machines. This is particularly useful for large-scale models or datasets. The framework provides built-in support for distributed training using PyTorch's `torch.distributed` module.
 
 ```bash
 python -m torch.distributed.launch \
@@ -309,9 +403,7 @@ python -m torch.distributed.launch \
 
 ### Experiment Tracking
 
-Built-in support for:
-- **TensorBoard**: Real-time training visualization
-- **WandB**: Cloud-based experiment tracking
+Experiment tracking is essential for monitoring and analyzing your training process. The framework supports both **TensorBoard** for local visualization and **WandB** for cloud-based experiment tracking. These tools allow you to log metrics, visualize training progress, and compare different experiments.
 
 ```python
 # Automatic logging
@@ -319,6 +411,7 @@ self.write_scalar("train/loss", loss, step)
 ```
 
 ### Model Checkpointing
+Model checkpointing ensures that your training progress is saved periodically, allowing you to resume training from the last saved state in case of interruptions. The framework automatically saves the best model and supports resuming from checkpoints.
 
 ```python
 # Automatic best model saving

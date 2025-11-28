@@ -282,27 +282,6 @@ class TDTalkerEvaluator(EvaluatorBase):
 
         return (simple_loss[mask].mean() / 2) * w
     
-    def vetices_loss(self, coef_gt, coef_pre, w=1, reduction='none', end_idx=None, mask=None):
-        """
-        Compute vertex reconstruction loss.
-        
-        Args:
-            coef_gt (torch.Tensor): Ground truth vertices.
-            coef_pre (torch.Tensor): Predicted vertices.
-            w (float): Loss weight multiplier. Default 1.
-            reduction (str): Reduction mode for criterion. Default 'none'.
-            end_idx (torch.Tensor, optional): End indices for masking.
-            mask (torch.Tensor, optional): Pre-computed mask tensor.
-            
-        Returns:
-            torch.Tensor: Weighted vertex loss value.
-        """
-        vet_loss = self.criterion(coef_gt, coef_pre, reduction=reduction)
-        if mask is None:
-            mask = self.fetch_mask(coef_pre.shape[0], end_idx)
-
-        return (vet_loss[mask].mean() / 2) * w
-    
     def velocity_loss(self, coef_gt, coef_pre, w=1, reduction='none', end_idx=None, mask=None):
         """
         Compute velocity (first-order derivative) loss.
