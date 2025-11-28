@@ -24,11 +24,18 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 - 📈 **Experiment Tracking**: Built-in TensorBoard and WandB support
 - 🚀 **Production Ready**: Comprehensive logging, checkpointing, and evaluation tools
 
+## 🗒️ TODO Plan
+
+- [ ] Support for audio_visual dataset collection module
+    - Design and implement audio-visual data collection workflow
+    - Provide data annotation and preprocessing tools
+    - Integrate with existing data management and training pipeline
+
 ## 📁 Project Structure
 
 ```
 3DTalkingHeadCodeBase/
-├── base/                       # Core base classes
+├── base/                      # Core base classes
 │   ├── base_config.py         # Configuration base class
 │   ├── base_dataset.py        # Dataset base class
 │   ├── base_datamanager.py    # Data manager base class
@@ -40,10 +47,10 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 │   ├── difftalk_trainer_config.yaml  # DiffPoseTalk trainer config
 │   └── style_trainer_config.yaml     # Style encoder trainer config
 │
-├── dataset/                    # Dataset implementations
+├── dataset/                   # Dataset implementations
 │   └── HDTF_TFHP.py           # HDTF-TFHP dataset
 │
-├── models/                     # Model implementations
+├── models/                    # Model implementations
 │   ├── diffposetalk.py        # DiffPoseTalk model
 │   ├── avatar/                # Avatar related modules
 │   │   ├── flame.py           # FLAME head model
@@ -59,7 +66,7 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 ├── trainers/                   # Training logic
 │   └── diffposetalk_trainer.py # DiffPoseTalk trainer
 │
-├── evaluation/                 # Evaluation metrics
+├── evaluator/                # Evaluators
 │   └── TalkerEvaluator.py     # Talking head evaluator
 │
 ├── utils/                      # Utility functions
@@ -397,5 +404,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 For questions and feedback, please open an issue or contact the maintainers.
-
----

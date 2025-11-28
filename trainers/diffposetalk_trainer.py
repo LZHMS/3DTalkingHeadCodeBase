@@ -9,7 +9,7 @@ from base.base_trainer import TrainerBase, TRAINER_REGISTRY
 from dataset.HDTF_TFHP import HDTF_TFHPDM, HDTF_TFHPWrapper
 from models.diffposetalk import StyleEncoder, DiffTalkingHead
 from base.base_evaluator import build_evaluator 
-from evaluation.TalkerEvaluator import TDTalkerEvaluator
+from evaluator.TalkerEvaluator import TDTalkerEvaluator
 
 from utils.meters import AverageMeter
 from utils.data_tool import truncate_motion_coef_and_audio
