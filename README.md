@@ -15,11 +15,7 @@
 ## 🎯 Overview
 This repository provides a foundational framework for any AI model training project. It serves as a base for **accumulating and reusing essential model code, enabling rapid development of custom modules and avoiding reinventing the wheel**. 
 
----
-
 The framework adopts a decoupled trainer architecture that automatically manages the entire pipeline—from data loading to model evaluation—with a robust configuration management system. 
-
----
 
 By embracing structured programming, **complex code is divided into independent modules, greatly improving code standardization, maintainability, and readability**.
 
@@ -43,10 +39,12 @@ By embracing structured programming, **complex code is divided into independent 
 
 ## 🗒️ TODO Plan
 
-- [ ] Support for audio_visual dataset collection module
-    - Design and implement audio-visual data collection workflow
-    - Provide data annotation and preprocessing tools
-    - Integrate with existing data management and training pipeline
+- [ ] Develop support for audio-visual dataset collection
+    - Design and implement an audio-visual data collection workflow
+    - Provide tools for data annotation and preprocessing
+    - Integrate with the existing data management and training pipeline
+- [ ] Implement Mesh Rendering using `pytorch3d.renderer`
+- [ ] Develop a FLAME texture rendering pipeline
 
 ## 📁 Project Structure
 
