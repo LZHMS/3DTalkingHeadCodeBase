@@ -13,8 +13,17 @@
 </div>
 
 ## 🎯 Overview
+This repository provides a foundational framework for any AI model training project. It serves as a base for **accumulating and reusing essential model code, enabling rapid development of custom modules and avoiding reinventing the wheel**. 
 
-This repository provides a comprehensive and modular codebase for 3D talking head generation research. It implements a decoupled, trainer-based training paradigm that fully manages the entire pipeline from data loading to model evaluation, with a complete configuration management system.
+---
+
+The framework adopts a decoupled trainer architecture that automatically manages the entire pipeline—from data loading to model evaluation—with a robust configuration management system. 
+
+---
+
+By embracing structured programming, **complex code is divided into independent modules, greatly improving code standardization, maintainability, and readability**.
+
+---
 
 **Key Features:**
 - 🔧 **Modular Architecture**: Decoupled components for easy extension and customization
@@ -23,6 +32,14 @@ This repository provides a comprehensive and modular codebase for 3D talking hea
 - ⚙️ **Flexible Configuration**: YACS-based hierarchical configuration management
 - 📈 **Experiment Tracking**: Built-in TensorBoard and WandB support
 - 🚀 **Production Ready**: Comprehensive logging, checkpointing, and evaluation tools
+
+> [!NOTE]
+>
+> This project currently implements state-of-the-art (SOTA) methods for 3D talking head generation, specifically the **DiffPoseTalk** model. We are actively developing our own research methods to further advance the field.
+
+> [!NOTE]
+>
+> This project is modified from **Dassl**, making it more user-friendly and structured. It includes additional modules tailored for 3D Talking Head research, such as datasets for 3D Talking Head studies and FLAME-based rendering components.
 
 ## 🗒️ TODO Plan
 
