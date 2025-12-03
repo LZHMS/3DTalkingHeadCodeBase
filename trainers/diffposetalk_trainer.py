@@ -70,12 +70,11 @@ class StyleEncoderTrainer(TrainerBase):
         logger.info(f"Building optimizer ...")
         self.optim = self.build_optimizer(self.model)
         self.sched = self.build_lr_scheduler(self.optim)
-        self.register_model("model", self.model, self.optim, self.sched)
 
-        device_count = torch.cuda.device_count()
-        if device_count > 1:
-            logger.info(f"Detected {device_count} GPUs (use nn.DataParallel)")
-            self.model = nn.DataParallel(self.model)
+        # Wrap model with DDP if distributed training is enabled
+        if self.is_distributed:
+            self.model = self.wrap_model_with_ddp(self.model, find_unused_parameters=False)
+        self.register_model("model", self.model, self.optim, self.sched)
     
     def run_iter(self):
         # Load data

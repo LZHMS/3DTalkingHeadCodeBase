@@ -1,10 +1,4 @@
-import logging
-import builtins
 from yacs.config import CfgNode as CN
-
-import logging
-logger: logging.Logger
-
 
 class BaseConfig:
   def __init__(self):
@@ -25,6 +19,12 @@ class BaseConfig:
     cfg.ENV.RESUME = ""
     cfg.ENV.GPU = [0]
     cfg.ENV.USE_CUDA = True
+    # Distributed training settings
+    cfg.ENV.DISTRIBUTED = False
+    cfg.ENV.LOCAL_RANK = -1  # Set by torchrun automatically
+    cfg.ENV.WORLD_SIZE = 1
+    cfg.ENV.DIST_BACKEND = 'nccl'  # 'nccl' for GPU, 'gloo' for CPU
+    cfg.ENV.DIST_URL = 'env://'  # Use environment variables set by torchrun
     # Print detailed information
     # E.g. trainer, dataset, and backbone
     cfg.ENV.VERBOSE = True
@@ -62,9 +62,10 @@ class BaseConfig:
     # Dataset
     ###########################
     cfg.DATASET = CN()
-    # Directory where datasets are stored
     cfg.DATASET.NAME = ""
-    cfg.DATASET.ROOT = ""
+    cfg.DATASET.ROOT = ""   # Directory where datasets are stored
+    # Percentage of validation data, set to 0 if do not want to use val data
+    cfg.DATASET.VAL_PERCENT = 0.1
 
     # for HDTF_TFHP
     cfg.DATASET.HDTF_TFHP = CN()
@@ -82,11 +83,6 @@ class BaseConfig:
     cfg.DATASET.HDTF_TFHP.TRUNC_PROB1 = 0.3 # truncation probability for clip 1
     cfg.DATASET.HDTF_TFHP.TRUNC_PROB2 = 0.4 # truncation probability for clip 2
     cfg.DATASET.HDTF_TFHP.PAD_MODE = 'zero' # 'zero' or 'replicate'
-
-    # Percentage of validation data (only used for SSL datasets)
-    # Set to 0 if do not want to use val data
-    # Using val data for hyperparameter tuning was done in Oliver et al. 2018
-    cfg.DATASET.VAL_PERCENT = 0.1
 
     ###########################
     # Dataloader
@@ -299,37 +295,3 @@ class BaseConfig:
     cfg.EVALUATE.RENDER.BLACK_BG = False
     # OP
     self.cfg = cfg
-
-    ## logger configuration
-    self.setup_logger()
-    logger.info("Initializing main logger ...")
-
-  def setup_logger(self, logger_name="MainLogger"):
-      logger = logging.getLogger(logger_name)
-      logger.setLevel(logging.INFO)
-      if not logger.handlers:
-        handler = logging.StreamHandler()
-        datefmt = "%Y-%m-%d %H:%M:%S"
-        fmt = "[%(asctime)s %(filename)s line %(lineno)d]=>%(levelname)s: %(message)s"
-        formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-      builtins.logger = logger
-
-  def collect_env_info(self):
-    """Return env info as a string.
-
-    Code source: github.com/facebookresearch/maskrcnn-benchmark
-    """
-    from torch.utils.collect_env import get_pretty_env_info
-
-    return get_pretty_env_info()
-  
-  def print_info(self):
-    """Print system info and env info.
-    """
-    logger.info('Collecting system info ...')
-    logger.info(f"Project configuration:\n{self.cfg}")
-    logger.info('Collecting env info ...')
-    logger.info(f"Env information:\n{self.collect_env_info()}")

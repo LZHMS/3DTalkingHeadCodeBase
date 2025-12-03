@@ -3,6 +3,7 @@ import datetime
 import shutil
 import pickle
 import random
+import builtins
 import numpy as np
 import os
 import os.path as osp
@@ -11,6 +12,8 @@ from collections import OrderedDict, defaultdict
 
 import torch
 import torch.nn as nn
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
 from utils.registry import Registry
@@ -30,7 +33,7 @@ def build_trainer(cfg):
     avai_trainers = TRAINER_REGISTRY.registered_names()
     check_availability(cfg.TRAINER.NAME, avai_trainers)
     if cfg.ENV.VERBOSE:
-        logger.info("Loading trainer: {}".format(cfg.TRAINER.NAME))
+        print("Loading trainer: {}".format(cfg.TRAINER.NAME))
     return TRAINER_REGISTRY.get(cfg.TRAINER.NAME)(cfg)
 
 class TrainerBase:
@@ -54,31 +57,43 @@ class TrainerBase:
         
         self.output_dir = cfg.ENV.OUTPUT_DIR
         self.cfg = cfg
+        
+        # Distributed training attributes
+        self.is_distributed = False
+        self.rank = 0
+        self.world_size = 1
+        self.local_rank = 0
 
-        self.check_cfg(cfg)
         self.system_init()
+        self.check_cfg()
 
-    def check_cfg(self, cfg):
-        """Check whether some variables are set correctly for
-        the trainer (optional).
-
-        For example, a trainer might require a particular sampler
-        for training such as 'RandomDomainSampler', so it is good
-        to do the checking:
-
-        assert cfg.DATALOADER.SAMPLER_TRAIN == 'RandomDomainSampler'
+    def check_cfg(self):
+        """Print system info and env info.
         """
-        pass
+        logger.info('Collecting system info ...')
+        logger.info(f"Project configuration:\n{self.cfg}")
+        logger.info('Collecting env info ...')
+        from torch.utils.collect_env import get_pretty_env_info
+        # Code source: github.com/facebookresearch/maskrcnn-benchmark
+        logger.info(f"Env information:\n{get_pretty_env_info()}")
 
     def system_init(self):
         # System Initialization
+        # Initialize distributed training first
+        if self.cfg.ENV.DISTRIBUTED:
+            self._init_distributed()
+        
+        # Reconfigure logger for distributed training
+        self._setup_distributed_logger()
+        
         ## random seed setting
         if self.cfg.ENV.SEED >= 0:
-          logger.info('Setting fixed seed: {}'.format(self.cfg.ENV.SEED))
-          random.seed(self.cfg.ENV.SEED)
-          np.random.seed(self.cfg.ENV.SEED)
-          torch.manual_seed(self.cfg.ENV.SEED)
-          torch.cuda.manual_seed_all(self.cfg.ENV.SEED)
+          seed = self.cfg.ENV.SEED + self.rank  # Different seed for each process
+          logger.info('Setting fixed seed: {} (base={}, rank={})'.format(seed, self.cfg.ENV.SEED, self.rank))
+          random.seed(seed)
+          np.random.seed(seed)
+          torch.manual_seed(seed)
+          torch.cuda.manual_seed_all(seed)
 
         ## cuda setting
         if torch.cuda.is_available() and self.cfg.ENV.USE_CUDA:
@@ -87,19 +102,75 @@ class TrainerBase:
           if not gpu_ids:
             raise ValueError("ENV.GPU must contain at least one gpu id when USE_CUDA=True")
 
-          target_gpu = gpu_ids[0]
-          if len(gpu_ids) > 1 and torch.distributed.is_available():
-            # assume torchrun/launch supplies LOCAL_RANK; fallback to rank % len(gpu_ids)
-            local_rank = int(os.environ.get("LOCAL_RANK", 0))
-            if torch.distributed.is_initialized():
-              local_rank = torch.distributed.get_rank() % len(gpu_ids)
-            target_gpu = gpu_ids[local_rank % len(gpu_ids)]
+          if self.is_distributed:
+            # In distributed mode, use local_rank to determine GPU
+            target_gpu = gpu_ids[self.local_rank % len(gpu_ids)]
+          else:
+            target_gpu = gpu_ids[0]
+            if len(gpu_ids) > 1 and torch.distributed.is_available():
+              # assume torchrun/launch supplies LOCAL_RANK; fallback to rank % len(gpu_ids)
+              local_rank = int(os.environ.get("LOCAL_RANK", 0))
+              if torch.distributed.is_initialized():
+                local_rank = torch.distributed.get_rank() % len(gpu_ids)
+              target_gpu = gpu_ids[local_rank % len(gpu_ids)]
 
           self.device = torch.device(f"cuda:{target_gpu}")
           torch.cuda.set_device(self.device)
+          logger.info('Setting device to {}'.format(self.device))
         else:
           self.device = torch.device("cpu")
           logger.info('Setting device to {}'.format(self.device))
+    
+    def _init_distributed(self):
+        """Initialize distributed training environment."""
+        # Get local rank from environment variable (set by torchrun)
+        self.local_rank = int(os.environ.get('LOCAL_RANK', -1))
+        
+        if self.local_rank == -1:
+            print("LOCAL_RANK not found in environment. Falling back to non-distributed mode.")
+            self.cfg.ENV.DISTRIBUTED = False
+            return
+        
+        # Initialize process group
+        dist.init_process_group(
+            backend=self.cfg.ENV.DIST_BACKEND,
+            init_method=self.cfg.ENV.DIST_URL
+        )
+        
+        self.rank = dist.get_rank()
+        self.world_size = dist.get_world_size()
+        self.is_distributed = True
+        
+        print(f"Initialized distributed training: rank={self.rank}, world_size={self.world_size}, local_rank={self.local_rank}")
+    
+    def _setup_distributed_logger(self):
+        """Reconfigure logger for distributed training.
+        
+        This sets up the logger to automatically filter messages based on process rank.
+        After this, you don't need to check is_main_process() before logging.
+        """
+        logger = logging.getLogger("MainLogger")
+        logger.handlers.clear()
+        
+        # Only setup output for main process
+        if self.rank == 0:
+            handler = logging.StreamHandler()
+            datefmt = "%Y-%m-%d %H:%M:%S"
+            fmt = "[%(asctime)s %(filename)s line %(lineno)d]=>%(levelname)s: %(message)s"
+            formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        else:
+            # Suppress all output for non-main processes
+            logger.addHandler(logging.NullHandler())
+        
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        builtins.logger = logger
+    
+    def is_main_process(self):
+        """Check if current process is the main process (rank 0)."""
+        return self.rank == 0
         
     def register_model(self, name="model", model=None, optim=None, sched=None):
         if self.__dict__.get("_models") is None:
@@ -122,6 +193,27 @@ class TrainerBase:
         self._models[name] = model
         self._optims[name] = optim
         self._scheds[name] = sched
+    
+    def wrap_model_with_ddp(self, model, find_unused_parameters=False):
+        """Wrap model with DistributedDataParallel.
+        
+        Args:
+            model: The model to wrap
+            find_unused_parameters: Whether to find unused parameters (useful for complex models)
+        
+        Returns:
+            Wrapped model or original model if not distributed
+        """
+        if self.is_distributed:
+            # Wrap with DDP
+            model = DDP(
+                model,
+                device_ids=[self.local_rank],
+                output_device=self.local_rank,
+                find_unused_parameters=find_unused_parameters
+            )
+            logger.info(f"Model wrapped with DistributedDataParallel (local_rank={self.local_rank})")
+        return model
 
     def get_model_names(self, names=None):
         names_real = list(self._models.keys())
@@ -151,6 +243,10 @@ class TrainerBase:
             > write_scalar
     """
     def init_writer(self, log_dir, extra_config=None):
+        # Only initialize writer on main process
+        if not self.is_main_process():
+            return
+            
         if self.__dict__.get("_writer") is None or self._writer is None:
             writer_dir = osp.join(self.output_dir, "tensorboard")
             mkdir_if_missing(writer_dir)
@@ -188,6 +284,9 @@ class TrainerBase:
             )
 
     def close_writer(self):
+        if not self.is_main_process():
+            return
+            
         if self._writer is not None:
             self._writer.close()
         if self.cfg.ENV.USE_WANDB:
@@ -195,6 +294,9 @@ class TrainerBase:
             self.wandb_run.finish()
             
     def write_scalar(self, tag, scalar_value, global_step=None, wandb=False):
+        if not self.is_main_process():
+            return
+            
         if self._writer is not None and not wandb:
             self._writer.add_scalar(tag, scalar_value, global_step)
 
@@ -237,7 +339,7 @@ class TrainerBase:
         self.start_epoch = self.resume_model_if_exist(directory)
 
         # Initialize summary writer
-        self.init_writer(self.output_dir)
+        self.init_writer()
 
         # Remember the starting time (for computing the elapsed time)
         self.time_start = time.time()
@@ -246,7 +348,7 @@ class TrainerBase:
         logger.info("Finish training!")
 
         do_test = not self.cfg.TEST.NO_TEST
-        if do_test:
+        if do_test and self.is_main_process():
             if self.cfg.TEST.FINAL_MODEL == "best_val":
                 logger.info("Deploy the model with the best val performance")
                 self.load_model(self.output_dir)
@@ -255,35 +357,39 @@ class TrainerBase:
             self.test()
 
         # Show elapsed time
-        elapsed = round(time.time() - self.time_start)
-        elapsed = str(datetime.timedelta(seconds=elapsed))
-        logger.info(f"Elapsed: {elapsed}")
+        if self.is_main_process():
+            elapsed = round(time.time() - self.time_start)
+            elapsed = str(datetime.timedelta(seconds=elapsed))
+            logger.info(f"Elapsed: {elapsed}")
 
         # Close writer
         self.close_writer()
+        
+        # Clean up distributed training
+        if self.is_distributed:
+            dist.destroy_process_group()
 
     def before_epoch(self):
-        pass
+        self.set_model_mode("train")
+        self.batch_time = AverageMeter()
+        self.data_time = AverageMeter()
+        self.loss_meter = defaultdict(AverageMeter)
+        self.acc_meter = defaultdict(AverageMeter)
+
+        self.end = time.time()
 
     def after_epoch(self):
+        """Actions after each epoch"""
+        
         last_epoch = (self.epoch + 1) == self.max_epoch
-        do_test = not self.cfg.TEST.NO_TEST
-        meet_checkpoint_freq = (
-            (self.epoch + 1) % self.cfg.TRAIN.CHECKPOINT_FREQ == 0
-            if self.cfg.TRAIN.CHECKPOINT_FREQ > 0 else False
-        )
-
-        if do_test:
-            self.test(split="val")
-            self.save_model(
-                self.epoch,
-                self.output_dir,
-                model_name="model-best.pth.tar"
-            )
-
-        if meet_checkpoint_freq or last_epoch:
-            self.save_model(self.epoch, self.output_dir)
-
+        if self.cfg.TRAIN.EVALUATE:
+            if ((self.epoch + 1) % self.cfg.TRAIN.EVAL_FREQ == 0) or last_epoch:
+                self.test(split="val")
+        
+        # Save checkpoint
+        if ((self.epoch + 1) % self.cfg.TRAIN.SAVE_FREQ == 0) or last_epoch:
+            self.save_model(epoch=self.epoch, directory=self.output_dir)
+            
     def run_epoch(self):
         raise NotImplementedError
     
@@ -292,6 +398,7 @@ class TrainerBase:
         self.batch_time = AverageMeter()
         self.data_time = AverageMeter()
         self.loss_meter = defaultdict(AverageMeter)
+        self.acc_meter = defaultdict(AverageMeter)
 
         self.end = time.time()
 
@@ -598,12 +705,21 @@ class TrainerBase:
     def save_model(
         self, iter=None, epoch=None, directory=None, is_best=False, val_result=None, model_name=""
     ):
+        # Only save on main process
+        if not self.is_main_process():
+            return
+            
         names = self.get_model_names()
         # Determine which model to load
         step_info = "iter" if self.use_iters else "epoch"
         step = iter if self.use_iters else epoch
         for name in names:
-            model_dict = self._models[name].state_dict()
+            # Get model state dict, unwrap DDP if necessary
+            model = self._models[name]
+            if isinstance(model, DDP):
+                model_dict = model.module.state_dict()
+            else:
+                model_dict = model.state_dict()
 
             optim_dict = None
             if self._optims[name] is not None:
@@ -690,7 +806,6 @@ class TrainerBase:
                 "Note that load_model() is skipped as no pretrained "
                 "model is given (ignore this if it's done on purpose)"
             )
-            return
 
         names = self.get_model_names()
 
@@ -717,10 +832,13 @@ class TrainerBase:
             val_result = checkpoint["val_result"]
             model_config = checkpoint["model_config"]
             
-            logger.info(
-                f"Load {model_path} to {name} ({step_info}={step}, val_result={val_result:.1f})"
-            )
-            self._models[name].load_state_dict(state_dict)
+            logger.info(f"Load {model_path} to {name} ({step_info}={step}, val_result={val_result:.1f})")
+            # Load state dict to model, handle DDP wrapper
+            model = self._models[name]
+            if isinstance(model, DDP):
+                model.module.load_state_dict(state_dict)
+            else:
+                model.load_state_dict(state_dict)
 
             models_config[name] = model_config
             models_state_dict[name] = state_dict

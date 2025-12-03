@@ -1,7 +1,7 @@
 import functools
 import torch.nn as nn
 
-from ..head.build import HEAD_REGISTRY
+# from ..head.build import HEAD_REGISTRY
 
 
 class MLP(nn.Module):
@@ -45,6 +45,6 @@ class MLP(nn.Module):
         return self.mlp(x)
 
 
-@HEAD_REGISTRY.register()
-def mlp(**kwargs):
-    return MLP(**kwargs)
+# @HEAD_REGISTRY.register()
+# def mlp(**kwargs):
+#     return MLP(**kwargs)

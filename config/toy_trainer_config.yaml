@@ -1,0 +1,54 @@
+# MNIST DDP Training Configuration (Multi-GPU)
+
+ENV:
+  SEED: 42
+  OUTPUT_DIR: ./output
+  GPU: [0]  # Multi-GPU training
+  USE_CUDA: True
+  VERBOSE: True
+  
+  # Distributed training
+  DISTRIBUTED: True
+  DIST_BACKEND: nccl
+  DIST_URL: env://
+  
+  # WandB settings
+  USE_WANDB: False
+
+DATASET:
+  NAME: MNIST
+  ROOT: ./data/
+  VAL_PERCENT: 0.1
+
+DATALOADER:
+  NUM_WORKERS: 4
+  TRAIN:
+    BATCH_SIZE: 64  # Per-GPU batch size (total = 64 * 2 = 128)
+  TEST:
+    BATCH_SIZE: 128
+
+MODEL:
+  NAME: ToyModel
+  INIT_WEIGHTS: 
+
+OPTIM:
+  NAME: adam
+  LR: 0.0001
+  LR_SCHEDULER: cosine
+  LR_UPDATE_FREQ: 1
+
+TRAINER:
+  NAME: ToyTrainer
+
+TRAIN:
+  USE_ITERS: False
+  MAX_EPOCHS: 40
+  PRINT_FREQ: 1
+  SAVE_FREQ: 10
+  EVALUATE: True
+  EVAL_FREQ: 10
+
+EVALUATE:
+  EVALUATOR: ToyEvaluator
+  LOSS:
+    NAME: CELoss

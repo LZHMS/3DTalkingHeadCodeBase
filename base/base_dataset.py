@@ -3,6 +3,7 @@ import os.path as osp
 import gdown
 import tarfile
 import zipfile
+import numpy as np
 
 from utils.registry import Registry
 from utils.tools import check_availability
@@ -29,12 +30,12 @@ class Datum:
         classname (str): class name.
     """
 
-    def __init__(self, name="", audio=None, vertices=None, template=None, coefficients=None, impath=None):
-        # for fpath in [impath, audio_path, vertices_path, template_file]:
-        #     assert isinstance(fpath, str)
-        #     assert check_isfile(fpath)
+    def __init__(self, name="", image=None, label=None, audio=None,
+                 vertices=None, template=None, coefficients=None, impath=None):
         self._name = name
         self._impath = impath
+        self._image = image
+        self._label = label
         self._audio = audio
         self._vertices = vertices
         self._template = template
@@ -47,6 +48,14 @@ class Datum:
     @property
     def impath(self):
         return self._impath
+    
+    @property
+    def image(self):
+        return self._image
+
+    @property
+    def label(self):
+        return self._label
 
     @property
     def audio(self):
@@ -110,6 +119,49 @@ class DatasetBase:
     @property
     def test(self):
         return self._test
+    
+    def split_train_val(self, val_percent, seed=42):
+        """Split training data into train and validation sets.
+        
+        This is a utility method that can be called by dataset classes
+        to automatically create a validation set from training data.
+        
+        Args:
+            val_percent (float): Percentage of training data to use for validation (0.0 to 1.0)
+            seed (int): Random seed for reproducible split
+        """
+        if self._train is None or len(self._train) == 0:
+            logger.warning("No training data to split for validation")
+            return
+        
+        if val_percent <= 0 or val_percent >= 1:
+            logger.info(f"Skip automatically spliting val dataset.")
+            return
+        
+        # Already has validation set, skip
+        if self._val is not None and len(self._val) > 0:
+            logger.info("Validation set already exists, skipping auto-split")
+            return
+
+        np.random.seed(seed)
+        total_size = len(self._train)
+        val_size = int(total_size * val_percent)
+        
+        if val_size == 0:
+            logger.warning(f"Validation size is 0 (total: {total_size}, percent: {val_percent})")
+            return
+        
+        # Random shuffle indices
+        indices = np.random.permutation(total_size)
+        
+        # Split indices
+        val_indices = indices[:val_size]
+        train_indices = indices[val_size:]
+        
+        # Create new splits
+        self._train = [self._train[i] for i in train_indices]
+        self._val = [self._train[i] for i in val_indices]
+        logger.info(f"Split complete: {len(self._train)} train, {len(self._val)} val")
 
     def download_data(self, url, dst, from_gdrive=True):
         if not osp.exists(osp.dirname(dst)):

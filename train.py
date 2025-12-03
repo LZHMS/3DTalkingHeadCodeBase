@@ -2,6 +2,7 @@ import argparse
 
 from base.base_config import BaseConfig
 from base.base_trainer import build_trainer
+from trainers.toy_trainer import ToyTrainer
 from trainers.diffposetalk_trainer import StyleEncoderTrainer, DiffPoseTalkTrainer
 
 import warnings
@@ -22,7 +23,6 @@ def main(args):
     base_cfg.cfg.merge_from_list(args.opts)
     # frozen the trainer config
     base_cfg.cfg.freeze()
-    base_cfg.print_info()
 
     trainer = build_trainer(base_cfg.cfg)
     if args.mode == "eval":

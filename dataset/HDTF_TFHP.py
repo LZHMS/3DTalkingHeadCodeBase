@@ -119,14 +119,16 @@ class HDTF_TFHP(DatasetBase):
                 data_dict[split].append(Datum(name=subject, audio=audio_pair, coefficients=coef_pair))
 
         super().__init__(train=data_dict['train'], val=data_dict['val'], test=data_dict['test'])
-
+        
+        # Auto-split validation set if needed: 0 < VAL_PERCENT < 1
+        self.split_train_val(cfg.VAL_PERCENT, cfg.ENV.SEED)
 
 class HDTF_TFHPDM(DataManager):
   
-    def __init__(self,
-                cfg,
-                dataset_wrapper=None,
-                infinite_train=False):
+    def __init__(self, cfg, dataset_wrapper=None, infinite_train=False):
+        if dataset_wrapper is None:
+            dataset_wrapper = HDTF_TFHPWrapper
+            
         super().__init__(cfg, dataset_wrapper, infinite_train)
 
 class HDTF_TFHPWrapper(DatasetWrapper):

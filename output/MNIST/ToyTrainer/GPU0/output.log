@@ -1,0 +1,325 @@
+Loading trainer: ToyTrainer
+Initialized distributed training: rank=0, world_size=1, local_rank=0
+[2025-12-03 23:09:10 base_trainer.py line 92]=>INFO: Setting fixed seed: 42 (base=42, rank=0)
+[2025-12-03 23:09:10 base_trainer.py line 119]=>INFO: Setting device to cuda:0
+[2025-12-03 23:09:10 base_trainer.py line 73]=>INFO: Collecting system info ...
+[2025-12-03 23:09:10 base_trainer.py line 74]=>INFO: Project configuration:
+DATALOADER:
+  NUM_WORKERS: 4
+  TEST:
+    BATCH_SIZE: 128
+  TRAIN:
+    BATCH_SIZE: 64
+DATASET:
+  HDTF_TFHP:
+    AUDIO_SR: 16000
+    COEF_FPS: 25
+    COEF_STATS: stats_train.npz
+    CROP: random
+    LMDB: 
+    MOTIONS: 100
+    N_PREV_MOTIONS: 10
+    PAD_MODE: zero
+    TEST: test.txt
+    TRAIN: train.txt
+    TRUNC_PROB1: 0.3
+    TRUNC_PROB2: 0.4
+    USE_CONTEXT_AUDIO: True
+    VAL: val.txt
+  NAME: MNIST
+  ROOT: ./data/
+  VAL_PERCENT: 0.1
+ENV:
+  DESCRIPTION: 
+  DISTRIBUTED: True
+  DIST_BACKEND: nccl
+  DIST_URL: env://
+  EXTRA:
+    
+  GPU: 0
+  LOCAL_RANK: -1
+  NAME: 
+  OUTPUT_DIR: output/MNIST/ToyTrainer/GPU0
+  RESUME: 
+  SEED: 42
+  USE_CUDA: True
+  USE_WANDB: False
+  VERBOSE: True
+  VERSION: 1
+  WANDB:
+    ENTITY: 3DVZHao
+    KEY: None
+    MODE: online
+    NAME: TrainingModel
+    NOTES: Training as baseline.
+    PROJECT: FLowTalker
+    TAGS: Baseline
+  WORLD_SIZE: 1
+EVALUATE:
+  EVALUATOR: ToyEvaluator
+  LOAD_RENDER: False
+  LOSS:
+    CONTRASTIVE:
+      TEMPRATURE: 0.1
+    GEOMETRIC:
+      HEAD:
+        W_ANGLE: 0.05
+        W_SMOOTH: 0.5
+        W_TRANS: 0.5
+        W_VELOCITY: 5.0
+      W_SMOOTH: 100000.0
+      W_VELOCITY: 10000000.0
+      W_VERTEX: 2000000.0
+    NAME: CELoss
+  NO_CONSTRAIN_PREV: False
+  RENDER:
+    BLACK_BG: False
+    NAME: PyMeshRenderer
+    REND_SIZE: (640, 640)
+  SAVE_COEF: False
+  TARGET: sample
+  TDMM:
+    FLAME:
+      ROOT: pretrained/FLAME
+INPUT:
+  GN_MEAN: 0.0
+  GN_STD: 0.15
+  NO_TRANSFORM: False
+  RANDAUGMENT_M: 10
+  RANDAUGMENT_N: 2
+MODEL:
+  BACKBONE:
+    DIFF_SCHEDULE: cosine
+    FACE_QUAN_NUM: 16
+    HIDDEN_SIZE: 1024
+    INAFFINE: False
+    INTERMEDIATE_SIZE: 1536
+    IN_DIM: 15069
+    NAME: 
+    NEG: 0.2
+    NUM_ATTENTION_HEADS: 8
+    NUM_HIDDEN_LAYERS: 6
+    N_STEPS: 1000
+    QUANT_FACTOR: 0
+    WINDOW_SIZE: 1
+  CFG_MODE: incremental
+  GUIDING_CONDITIONS: audio,style
+  HEAD:
+    ACTIVATION: relu
+    ALIGN_MASK_WIDTH: 0
+    AUDIO_DIM: 128
+    AUDIO_MODEL: wav2vec2
+    BN: True
+    DROPOUT: 0.0
+    HIDDEN_LAYERS: ()
+    NAME: 
+    NO_HEAD_POSE: False
+    N_EMBED: 256
+    ROT_REPR: aa
+    STYLE_DIM: 128
+    USE_INDICATOR: False
+    USE_LEARNABLE_PE: True
+    ZQUANT_DIM: 64
+  INIT_WEIGHTS: None
+  NAME: ToyModel
+  TAIL:
+    MLP_RATIO: 4
+    NAME: 
+    NUM_HIDDEN_LAYERS: 4
+    TYARGET: sample
+OPTIM:
+  ADAM_BETA1: 0.9
+  ADAM_BETA2: 0.999
+  ADAPTIVE_LR: False
+  BASE_LR_MULT: 0.1
+  FACTOR: 0.3
+  GAMMA: 0.5
+  LR: 0.0001
+  LR_SCHEDULER: cosine
+  LR_UPDATE_FREQ: 1
+  MIN_LR_RATIO: 2e-06
+  MOMENTUM: 0.9
+  NAME: adam
+  NEW_LAYERS: ()
+  RMSPROP_ALPHA: 0.99
+  SGD_DAMPNING: 0
+  SGD_NESTEROV: True
+  STAGED_LR: False
+  STEP_LR: True
+  STEP_SIZE: 20
+  WARMUP_CONS_LR: 1e-05
+  WARMUP_EPOCHS: -1
+  WARMUP_ITERS: -1
+  WARMUP_MIN_LR: 1e-05
+  WARMUP_MULTIPLIER: 0
+  WARMUP_RECOUNT: True
+  WARMUP_TYPE: linear
+  WEIGHT_DECAY: 0.0005
+TEST:
+  FINAL_MODEL: last_step
+  NO_TEST: False
+  SPLIT: test
+TRAIN:
+  EVALUATE: True
+  EVAL_FREQ: 10
+  MAX_EPOCHS: 40
+  MAX_ITERS: 10000
+  PRINT_FREQ: 1
+  RENDER_FREQ: 10
+  SAVE_FREQ: 10
+  START_EPOCH: 0
+  SYNC_BN: False
+  USE_ITERS: False
+  USE_SGD: False
+TRAINER:
+  NAME: ToyTrainer
+[2025-12-03 23:09:10 base_trainer.py line 75]=>INFO: Collecting env info ...
+[2025-12-03 23:09:13 base_trainer.py line 78]=>INFO: Env information:
+PyTorch version: 2.0.0+cu118
+Is debug build: False
+CUDA used to build PyTorch: 11.8
+ROCM used to build PyTorch: N/A
+
+OS: Ubuntu 24.04.3 LTS (x86_64)
+GCC version: (Ubuntu 9.5.0-6ubuntu2) 9.5.0
+Clang version: Could not collect
+CMake version: Could not collect
+Libc version: glibc-2.39
+
+Python version: 3.9.25 (main, Nov  3 2025, 22:33:05)  [GCC 11.2.0] (64-bit runtime)
+Python platform: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+Is CUDA available: True
+CUDA runtime version: Could not collect
+CUDA_MODULE_LOADING set to: LAZY
+GPU models and configuration: GPU 0: NVIDIA GeForce RTX 3050 Laptop GPU
+Nvidia driver version: 546.92
+cuDNN version: Could not collect
+HIP runtime version: N/A
+MIOpen runtime version: N/A
+Is XNNPACK available: True
+
+CPU:
+Architecture:                         x86_64
+CPU op-mode(s):                       32-bit, 64-bit
+Address sizes:                        48 bits physical, 48 bits virtual
+Byte Order:                           Little Endian
+CPU(s):                               16
+On-line CPU(s) list:                  0-15
+Vendor ID:                            AuthenticAMD
+Model name:                           AMD Ryzen 7 6800HS Creator Edition
+CPU family:                           25
+Model:                                68
+Thread(s) per core:                   2
+Core(s) per socket:                   8
+Socket(s):                            1
+Stepping:                             1
+BogoMIPS:                             6387.83
+Flags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable nonstop_tsc cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves clzero xsaveerptr arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload umip vaes vpclmulqdq rdpid fsrm
+Virtualization:                       AMD-V
+Hypervisor vendor:                    Microsoft
+Virtualization type:                  full
+L1d cache:                            256 KiB (8 instances)
+L1i cache:                            256 KiB (8 instances)
+L2 cache:                             4 MiB (8 instances)
+L3 cache:                             16 MiB (1 instance)
+NUMA node(s):                         1
+NUMA node0 CPU(s):                    0-15
+Vulnerability Gather data sampling:   Not affected
+Vulnerability Itlb multihit:          Not affected
+Vulnerability L1tf:                   Not affected
+Vulnerability Mds:                    Not affected
+Vulnerability Meltdown:               Not affected
+Vulnerability Mmio stale data:        Not affected
+Vulnerability Reg file data sampling: Not affected
+Vulnerability Retbleed:               Not affected
+Vulnerability Spec rstack overflow:   Vulnerable: Safe RET, no microcode
+Vulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:             Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP always-on; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                  Not affected
+Vulnerability Tsx async abort:        Not affected
+
+Versions of relevant libraries:
+[pip3] numpy==1.26.4
+[pip3] pytorch3d==0.7.3
+[pip3] torch==1.12.1
+[pip3] torchaudio==2.0.1+cu118
+[pip3] torchdiffeq==0.2.5
+[pip3] torchvision==0.15.1+cu118
+[conda] blas                       1.0                 mkl                          https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+[conda] cudatoolkit                11.6.0              hecad31d_10                  https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+[conda] mkl                        2025.0.0            hacee8c2_941
+[conda] mkl-service                2.5.2               py39hacdc0fc_0
+[conda] mkl_fft                    1.3.11              py39hacdc0fc_1
+[conda] mkl_random                 1.3.0               py39h505adc9_0
+[conda] numpy                      1.26.4              py39h64c44e4_1
+[conda] numpy-base                 1.26.4              py39he1678cf_1
+[conda] pytorch                    1.12.1              py3.9_cuda11.6_cudnn8.3.2_0  https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch
+[conda] pytorch-mutex              1.0                 cuda                         https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch
+[conda] pytorch3d                  0.7.3               py39_cu116_pyt1121           pytorch3d
+[conda] torch                      2.0.0+cu118         pypi_0                       pypi
+[conda] torchaudio                 2.0.1+cu118         pypi_0                       pypi
+[conda] torchdiffeq                0.2.5               pypi_0                       pypi
+[conda] torchvision                0.15.1+cu118        pypi_0                       pypi
+[2025-12-03 23:09:13 base_dataset.py line 20]=>INFO: Loading dataset: MNIST
+./data/
+/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/data
+/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/data/MNIST
+Traceback (most recent call last):
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/train.py", line 64, in <module>
+    main(args)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/train.py", line 27, in main
+    trainer = build_trainer(base_cfg.cfg)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/base/base_trainer.py", line 37, in build_trainer
+    return TRAINER_REGISTRY.get(cfg.TRAINER.NAME)(cfg)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/trainers/toy_trainer.py", line 26, in __init__
+    self.build_data_loader()
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/trainers/toy_trainer.py", line 34, in build_data_loader
+    dm = MNISTDM(self.cfg, infinite_train=False)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/dataset/MINIST.py", line 79, in __init__
+    super().__init__(cfg, dataset_wrapper, infinite_train)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/base/base_datamanager.py", line 79, in __init__
+    dataset = build_dataset(cfg)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/base/base_dataset.py", line 21, in build_dataset
+    return DATASET_REGISTRY.get(cfg.DATASET.NAME)(cfg.DATASET)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/dataset/MINIST.py", line 69, in __init__
+    self.split_train_val(cfg.VAL_PERCENT, 42)
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/base/base_dataset.py", line 163, in split_train_val
+    self._val = [self._train[i] for i in val_indices]
+  File "/mnt/e/WorkSpace/Projects/3DTalklingHead/3DTalkingHeadCodeBase/base/base_dataset.py", line 163, in <listcomp>
+    self._val = [self._train[i] for i in val_indices]
+IndexError: list index out of range
+ERROR:torch.distributed.elastic.multiprocessing.api:failed (exitcode: 1) local_rank: 0 (pid: 1737) of binary: /home/zhli/miniconda3/envs/diffposetalk/bin/python
+Traceback (most recent call last):
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/run.py", line 798, in <module>
+    main()
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 346, in wrapper
+    return f(*args, **kwargs)
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/run.py", line 794, in main
+    run(args)
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/run.py", line 785, in run
+    elastic_launch(
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/zhli/miniconda3/envs/diffposetalk/lib/python3.9/site-packages/torch/distributed/launcher/api.py", line 250, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+train.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-12-03_23:09:25
+  host      : ZHaoLiLapTop.localdomain
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1737)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

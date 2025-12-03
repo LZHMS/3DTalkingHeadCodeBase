@@ -19,6 +19,7 @@ ENV:
 DATASET:
   NAME: HDTF_TFHP
   ROOT: ./data/
+  VAL_PERCENT: 0 # set to 0 if do not want to use auto val data
   HDTF_TFHP:
     COEF_STATS: stats_train.npz
     TRAIN: train.txt
