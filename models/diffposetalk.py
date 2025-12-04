@@ -6,8 +6,8 @@ from .lib.common import pad_audio
 from .lib.head.pose_encoding import PositionalEncoding
 from .lib.head.diffusion_schedule import DiffusionSchedule
 
-from .lib.network.hubert import HubertModel
-from .lib.network.wav2vec import Wav2Vec2Model
+from .lib.audio.hubert import HubertModel
+from .lib.audio.wav2vec import Wav2Vec2Model
 from .lib.network.denoising_network import DenoisingNetwork
 
 

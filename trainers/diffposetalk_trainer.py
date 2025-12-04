@@ -506,8 +506,6 @@ class DiffPoseTalkTrainer(TrainerBase):
                     logger.info(f'iter: {current_iter + 1} {loss_info}')
                     
                 for item, loss in loss_meter.items():
-                    if self.cfg.ENV.USE_WANDB:
-                        self.wandb_run.log({f"val/loss_{item}": loss.avg})
                     self.write_scalar(f"val/loss_{item}", loss.avg, current_iter)
 
     def parse_batch(self, batch):

@@ -3,6 +3,12 @@ ENV:
   NAME: DiffPoseTalk_Trainer
   DESCRIPTION: Train the diffusion model of DiffPoseTalk.
   OUTPUT_DIR: ./output
+  GPU: [0, 1]  # List format - will be parsed as a list
+  USE_CUDA: True
+  # Distributed training
+  DISTRIBUTED: True
+  DIST_BACKEND: nccl
+  DIST_URL: env://
   VERBOSE: True
   USE_WANDB: False
   WANDB:

@@ -48,7 +48,8 @@ class TrainerBase:
         # Save as attributes some frequently used variables
         self.use_iters = cfg.TRAIN.USE_ITERS
         if self.use_iters:
-            self.iter, self.max_iters = 0, cfg.TRAIN.MAX_ITERS
+            self.iter, self.start_iter = 0, cfg.TRAIN.START_ITER
+            self.max_iters = cfg.TRAIN.MAX_ITERS
         else:
             self.epoch, self.start_epoch = 0, cfg.TRAIN.START_EPOCH
             self.max_epoch = cfg.TRAIN.MAX_EPOCHS
@@ -307,7 +308,7 @@ class TrainerBase:
         self.before_train()
         if self.use_iters:
             assert self.max_iters is not None, "max_iters must be specified when use_iters=True"
-            for self.iter in range(self.max_iters + 1):
+            for self.iter in range(self.start_iter, self.max_iters):
                 self.before_iter()
                 self.run_iter()
                 self.after_iter()
@@ -324,7 +325,10 @@ class TrainerBase:
         directory = self.output_dir
         if self.cfg.ENV.RESUME:
             directory = self.cfg.ENV.RESUME
-        self.start_epoch = self.resume_model_if_exist(directory)
+        if self.use_iters:
+            self.start_iter = self.resume_model_if_exist(directory)
+        else:
+            self.start_epoch = self.resume_model_if_exist(directory)
 
         # Initialize summary writer
         self.init_writer()
@@ -452,10 +456,27 @@ class TrainerBase:
     def model_backward_and_update(self, loss, names=None):
         self.model_zero_grad(names)
         self.model_backward(loss)
+        # Apply gradient clipping to prevent exploding gradients
+        self.clip_gradients(names)
+
         self.model_update(names)
+
+    def clip_gradients(self, names=None):
+        """Apply gradient clipping to prevent exploding gradients."""
+        names = self.get_model_names(names)
+        max_norm = getattr(self.cfg.TRAIN, 'GRAD_CLIP', 1.0)  # Default gradient clip value
+
+        for name in names:
+            if self._models[name] is not None:
+                torch.nn.utils.clip_grad_norm_(self._models[name].parameters(), max_norm)
+
 
     def detect_anomaly(self, loss):
         if not torch.isfinite(loss).all():
+            # Log additional information for debugging
+            logger.error(f"Loss contains NaN or inf values: {loss}")
+            if hasattr(loss, 'item'):
+                logger.error(f"Loss value: {loss.item()}")
             raise FloatingPointError("Loss is infinite or NaN!")
 
     def build_optimizer(self, model, param_groups=None):

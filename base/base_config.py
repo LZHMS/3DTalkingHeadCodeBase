@@ -244,6 +244,7 @@ class BaseConfig:
     cfg.TRAIN.USE_ITERS = False
     cfg.TRAIN.START_EPOCH = 0
     cfg.TRAIN.MAX_EPOCHS = 50
+    cfg.TRAIN.START_ITER = 0
     cfg.TRAIN.MAX_ITERS = 10000
     # How often (batch) to print training information
     cfg.TRAIN.PRINT_FREQ = 10

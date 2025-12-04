@@ -84,7 +84,7 @@ class TDTalkerEvaluator(EvaluatorBase):
         # Load renderer if specified in config
         if cfg.LOAD_RENDER:
             from psbody.mesh import Mesh
-            from utils.renderer import PyMeshRenderer
+
             self.Mesh = Mesh
             self.uv_coords = np.load(osp.join(cfg.TDMM.FLAME.ROOT, 'uv_coords.npz'))
             self.mesh_render = self.setup_mesh_renderer(cfg.RENDER.NAME,
@@ -102,11 +102,9 @@ class TDTalkerEvaluator(EvaluatorBase):
             
         Returns:
             Renderer: Initialized mesh renderer instance.
-            
-        Raises:
-            ValueError: If unknown renderer name is specified.
         """
         if render_name == "PyMeshRenderer":
+            from utils.renderer import PyMeshRenderer
             return PyMeshRenderer(size, black_bg=black_bg)
         else:
             raise ValueError(f"Unknown mesh renderer: {render_name}")
@@ -441,7 +439,7 @@ class TDTalkerEvaluator(EvaluatorBase):
 
         return coef_dict
 
-    def render_and_save(self, name, motion_coef, audio, clip_id, output_dir, shape_coef=None, texture=None):
+    def render_and_save(self, iter, name, motion_coef, audio, clip_id, output_dir, shape_coef=None, texture=None):
         """
         Render motion coefficients to video and save.
         
@@ -469,7 +467,7 @@ class TDTalkerEvaluator(EvaluatorBase):
             self.save_coef_file({k: v[0] for k, v in coef_dict.items()}, coef_path)
         
         # Render to video file
-        render_path = osp.join(output_dir, "renderings", f"{name}_clip{clip_id}_render.mp4")
+        render_path = osp.join(output_dir, "renderings", f"iter_{iter:06d}", f"{name}_clip{clip_id}_render.mp4")
         self.render_to_video(verts_list[0], render_path, audio=audio, texture=texture)
     
     def render_to_video(self, verts_list, out_path, audio=None, texture=None, sample_rate=16000):
