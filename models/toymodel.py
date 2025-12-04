@@ -7,10 +7,11 @@ from .lib.network.mlp import MLP
 
 class ToyModel(nn.Module):
     """Simple MLP for MNIST digit recognition"""
-    def __init__(self):
+    def __init__(self, cfg):
       super(ToyModel, self).__init__()
-      self.net = MLP(in_features=1*28*28,
-                     hidden_layers=[20, 10],
+      self.net = MLP(in_features=cfg.INPUT_DIM,
+                     hidden_layers=cfg.HIDDEN_DIM,
+                     out_features=cfg.OUTPUT_DIM,
                      activation='relu',
                      bn=True, dropout=0.1)
 

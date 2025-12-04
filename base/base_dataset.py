@@ -158,9 +158,12 @@ class DatasetBase:
         val_indices = indices[:val_size]
         train_indices = indices[val_size:]
         
+        # Save original train data before reassigning
+        original_train = self._train
+        
         # Create new splits
-        self._train = [self._train[i] for i in train_indices]
-        self._val = [self._train[i] for i in val_indices]
+        self._train = [original_train[i] for i in train_indices]
+        self._val = [original_train[i] for i in val_indices]
         logger.info(f"Split complete: {len(self._train)} train, {len(self._val)} val")
 
     def download_data(self, url, dst, from_gdrive=True):

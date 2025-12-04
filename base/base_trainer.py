@@ -242,7 +242,7 @@ class TrainerBase:
             > close_writer
             > write_scalar
     """
-    def init_writer(self, log_dir, extra_config=None):
+    def init_writer(self, extra_config=None):
         # Only initialize writer on main process
         if not self.is_main_process():
             return

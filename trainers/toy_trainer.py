@@ -9,6 +9,7 @@ from base.base_trainer import TrainerBase, TRAINER_REGISTRY
 from dataset.MINIST import MNISTDM
 from models.toymodel import ToyModel
 from utils.meters import AverageMeter
+from base.base_evaluator import build_evaluator
 from evaluator.ToyEvaluator import ToyEvaluator
 
 import logging
@@ -25,7 +26,7 @@ class ToyTrainer(TrainerBase):
         # Build components
         self.build_data_loader()
         self.build_model()
-        self.evaluator = ToyEvaluator(cfg, device=self.device)
+        self.evaluator = build_evaluator(cfg, device=self.device)
         
     def build_data_loader(self):
         """Create MNIST data loaders"""
@@ -43,7 +44,7 @@ class ToyTrainer(TrainerBase):
         """Build MNIST model"""
         
         logger.info(f"Building model {self.cfg.MODEL.NAME} ...")
-        self.model = ToyModel(self.cfg.MODEL)
+        self.model = ToyModel(self.cfg.MODEL.MLP)
         
         # Load pretrained weights if specified
         if self.cfg.MODEL.INIT_WEIGHTS:
@@ -94,8 +95,8 @@ class ToyTrainer(TrainerBase):
                 info += [f"batch [{batch_idx + 1}/{self.num_batches}]"]
                 info += [f"time {self.batch_time.val:.3f} ({self.batch_time.avg:.3f})"]
                 info += [f"data {self.data_time.val:.3f} ({self.data_time.avg:.3f})"]
-                info += [f"loss {self.loss_meter.val:.4f} ({self.loss_meter.avg:.4f})"]
-                info += [f"acc {self.loss_meter.val:.2f}% ({self.acc_meter.avg:.2f}%)"]
+                info += [f"loss {self.loss_meter['loss'].val:.4f} ({self.loss_meter['loss'].avg:.4f})"]
+                info += [f"acc {self.acc_meter['accuracy'].val:.2f}% ({self.acc_meter['accuracy'].avg:.2f}%)"]
                 info += [f"lr {self.get_current_lr():.4e}"]
                 info += [f"eta {eta}"]
                 info = info + [f"rank {self.rank}"] if self.is_distributed else info
@@ -105,8 +106,8 @@ class ToyTrainer(TrainerBase):
         
         # Log epoch-level metrics
         current_step = (self.epoch + 1) * self.num_batches
-        self.write_scalar("train/loss", self.loss_meter.avg, current_step)
-        self.write_scalar("train/accuracy", self.loss_meter.avg, current_step)
+        self.write_scalar("train/loss", self.loss_meter['loss'].avg, current_step)
+        self.write_scalar("train/accuracy", self.acc_meter['accuracy'].avg, current_step)
         self.write_scalar("train/lr", self.get_current_lr(), current_step)
         self.write_scalar("train/epoch", self.epoch + 1, current_step, wandb=True)
         

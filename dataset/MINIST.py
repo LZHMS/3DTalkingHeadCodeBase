@@ -17,14 +17,6 @@ class MNIST(DatasetBase):
     """
     
     def __init__(self, cfg):
-        # Data config and path
-        print(cfg.ROOT)
-        root = os.path.abspath(os.path.expanduser(cfg.ROOT))
-        print(root)
-        self.dataset_dir = os.path.join(root, cfg.NAME)
-        print(self.dataset_dir)
-        os.makedirs(self.dataset_dir, exist_ok=True)   # Create directory if not exists
-        
         # Define transformations
         self.transform = transforms.Compose([
             transforms.ToTensor(),
@@ -34,13 +26,13 @@ class MNIST(DatasetBase):
         # Load MNIST train and test datasets (will download if not exists)
         try:
             train_dataset = datasets.MNIST(
-                root=self.dataset_dir,
+                root=cfg.ROOT,
                 train=True,
                 download=True,
                 transform=self.transform
             )
             test_dataset = datasets.MNIST(
-                root=self.dataset_dir,
+                root=cfg.ROOT,
                 train=False,
                 download=True,
                 transform=self.transform

@@ -23,8 +23,7 @@ class HDTF_TFHP(DatasetBase):
 
     def __init__(self, cfg):
         # data config and path
-        root = os.path.abspath(os.path.expanduser(cfg.ROOT))
-        self.dataset_dir = os.path.join(root, cfg.NAME)
+        self.dataset_dir = os.path.join(cfg.ROOT, cfg.NAME)
         lmdb_path = self.dataset_dir
         split_path = [os.path.join(self.dataset_dir, cfg.HDTF_TFHP.TRAIN),
                            os.path.join(self.dataset_dir, cfg.HDTF_TFHP.VAL),

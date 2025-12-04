@@ -29,7 +29,10 @@ DATALOADER:
 
 MODEL:
   NAME: ToyModel
-  INIT_WEIGHTS: 
+  MLP:
+    INPUT_DIM: 784
+    HIDDEN_DIM: [128, 64]
+    OUTPUT_DIM: 10
 
 OPTIM:
   NAME: adam

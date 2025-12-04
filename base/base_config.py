@@ -102,6 +102,10 @@ class BaseConfig:
     ###########################
     cfg.MODEL = CN()
     cfg.MODEL.NAME = ""
+    cfg.MODEL.MLP = CN()
+    cfg.MODEL.MLP.INPUT_DIM = 784
+    cfg.MODEL.MLP.HIDDEN_DIM = [128, 64]
+    cfg.MODEL.MLP.OUTPUT_DIM = 10
     # Path to model weights (for initialization)
     cfg.MODEL.INIT_WEIGHTS = ""
     # Definition of embedding layers
