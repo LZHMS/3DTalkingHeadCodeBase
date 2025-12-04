@@ -38,7 +38,8 @@ By embracing structured programming, **complex code is divided into independent 
 > This project is modified from **Dassl**, making it more user-friendly and structured. It includes additional modules tailored for 3D Talking Head research, such as datasets for 3D Talking Head studies and FLAME-based rendering components.
 
 ## 🗒️ TODO Plan
-
+- [x] Add DistributedDataParallel (DDP) Support
+https://github.com/LZHMS/3DTalkingHeadCodeBase/blob/8424b81da132c3ea953169ae2c7f934304e3b24f/base/base_trainer.py#L185-L204
 - [ ] Develop support for audio-visual dataset collection
     - Design and implement an audio-visual data collection workflow
     - Provide tools for data annotation and preprocessing
