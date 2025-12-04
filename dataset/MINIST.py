@@ -1,7 +1,6 @@
 """
 MNIST Dataset for Handwritten Digit Recognition
 """
-import os
 from torchvision import datasets, transforms
 
 from base.base_dataset import Datum, DatasetBase, DATASET_REGISTRY

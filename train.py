@@ -9,16 +9,10 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def merge_args(base_cfg, args):
-    if args.gpu:
-        base_cfg.cfg.ENV.GPU = args.gpu
-
 def main(args):
     base_cfg = BaseConfig()
     base_cfg.cfg.merge_from_file(args.config_file)
-
-    # From command line arguments
-    merge_args(base_cfg, args)
+    
     # From optional input arguments
     base_cfg.cfg.merge_from_list(args.opts)
     # frozen the trainer config
@@ -39,9 +33,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--config-file', type=str, default='config/codetalker/vocaset/stage1.yaml', help='path to config file'
-    )
-    parser.add_argument(
-        '--gpu', type=str, default='0', help='gpu id to use'
     )
     parser.add_argument(
         '--mode', type=str, choices=['train', 'eval', 'analysis'], 

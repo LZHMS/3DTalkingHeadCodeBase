@@ -102,12 +102,19 @@ class BaseConfig:
     ###########################
     cfg.MODEL = CN()
     cfg.MODEL.NAME = ""
+    cfg.MODEL.INIT_WEIGHTS = ""   # Path to model weights (for initialization)
+    cfg.MODEL.AUDIO_MODEL = 'wav2vec2'
+    cfg.MODEL.AUDIO_DIM = 128
+
     cfg.MODEL.MLP = CN()
     cfg.MODEL.MLP.INPUT_DIM = 784
     cfg.MODEL.MLP.HIDDEN_DIM = [128, 64]
     cfg.MODEL.MLP.OUTPUT_DIM = 10
-    # Path to model weights (for initialization)
-    cfg.MODEL.INIT_WEIGHTS = ""
+
+    
+
+    
+    
     # Definition of embedding layers
     cfg.MODEL.HEAD = CN()
     # If none, do not construct embedding layers, the
@@ -119,16 +126,10 @@ class BaseConfig:
     cfg.MODEL.HEAD.ACTIVATION = "relu"
     cfg.MODEL.HEAD.BN = True
     cfg.MODEL.HEAD.DROPOUT = 0.0
-    # VQ-VAE config
-    cfg.MODEL.HEAD.N_EMBED = 256
-    cfg.MODEL.HEAD.ZQUANT_DIM = 64
-    # Audio model
-    cfg.MODEL.HEAD.AUDIO_MODEL = 'wav2vec2'
-    cfg.MODEL.HEAD.AUDIO_DIM = 128
-    # Style ref
-    cfg.MODEL.HEAD.STYLE_DIM = 128
-    # Use indicator for padding frames
-    cfg.MODEL.HEAD.USE_INDICATOR = False
+
+    
+    
+    cfg.MODEL.HEAD.USE_INDICATOR = False  # Use indicator for padding frames
 
     # optional head type according to different input
     cfg.MODEL.HEAD.ROT_REPR = 'aa'

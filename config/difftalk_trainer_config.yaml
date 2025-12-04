@@ -14,7 +14,8 @@ ENV:
     TAGS: [Baseline]
     MODE: online
   EXTRA:
-    STYLE_ENC_CKPT: 
+    STYLE_DIM: 128
+    STYLE_ENC_CKPT:
 
 DATASET:
   NAME: HDTF_TFHP

@@ -3,7 +3,7 @@
 ENV:
   SEED: 42
   OUTPUT_DIR: ./output
-  GPU: [0]  # Multi-GPU training
+  GPU: [0, 1]  # List format - will be parsed as a list
   USE_CUDA: True
   VERBOSE: True
   

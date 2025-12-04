@@ -32,8 +32,6 @@ TRAINER_REGISTRY = Registry("TRAINER")
 def build_trainer(cfg):
     avai_trainers = TRAINER_REGISTRY.registered_names()
     check_availability(cfg.TRAINER.NAME, avai_trainers)
-    if cfg.ENV.VERBOSE:
-        print("Loading trainer: {}".format(cfg.TRAINER.NAME))
     return TRAINER_REGISTRY.get(cfg.TRAINER.NAME)(cfg)
 
 class TrainerBase:
@@ -98,21 +96,17 @@ class TrainerBase:
         ## cuda setting
         if torch.cuda.is_available() and self.cfg.ENV.USE_CUDA:
           torch.backends.cudnn.benchmark = True
-          gpu_ids = self.cfg.ENV.GPU
-          if not gpu_ids:
-            raise ValueError("ENV.GPU must contain at least one gpu id when USE_CUDA=True")
-
           if self.is_distributed:
             # In distributed mode, use local_rank to determine GPU
-            target_gpu = gpu_ids[self.local_rank % len(gpu_ids)]
+            target_gpu = self.cfg.ENV.GPU[self.local_rank % len(self.cfg.ENV.GPU)]
           else:
-            target_gpu = gpu_ids[0]
-            if len(gpu_ids) > 1 and torch.distributed.is_available():
+            target_gpu = self.cfg.ENV.GPU[0]
+            if len(self.cfg.ENV.GPU) > 1 and torch.distributed.is_available():
               # assume torchrun/launch supplies LOCAL_RANK; fallback to rank % len(gpu_ids)
               local_rank = int(os.environ.get("LOCAL_RANK", 0))
               if torch.distributed.is_initialized():
-                local_rank = torch.distributed.get_rank() % len(gpu_ids)
-              target_gpu = gpu_ids[local_rank % len(gpu_ids)]
+                local_rank = torch.distributed.get_rank() % len(self.cfg.ENV.GPU)
+              target_gpu = self.cfg.ENV.GPU[local_rank % len(self.cfg.ENV.GPU)]
 
           self.device = torch.device(f"cuda:{target_gpu}")
           torch.cuda.set_device(self.device)
@@ -126,17 +120,11 @@ class TrainerBase:
         # Get local rank from environment variable (set by torchrun)
         self.local_rank = int(os.environ.get('LOCAL_RANK', -1))
         
-        if self.local_rank == -1:
-            print("LOCAL_RANK not found in environment. Falling back to non-distributed mode.")
-            self.cfg.ENV.DISTRIBUTED = False
-            return
-        
         # Initialize process group
         dist.init_process_group(
             backend=self.cfg.ENV.DIST_BACKEND,
             init_method=self.cfg.ENV.DIST_URL
         )
-        
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
         self.is_distributed = True

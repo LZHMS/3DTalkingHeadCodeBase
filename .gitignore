@@ -23,4 +23,5 @@ FLAME/
 # ignore the data
 data/HDTF_TFHP
 data/MNIST
+data/VOCASET
 data/data_pipline/audio_visual_dataset/
